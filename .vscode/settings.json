@@ -1,0 +1,7 @@
+{
+  "workbench.colorCustomizations": {
+    "diffEditor.removedTextBackground": "#fc1f1f",
+    "minimap.background": "#00000000",
+    "scrollbar.shadow": "#00000000"
+  }
+}
