@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "BLEDevice.h"
 
+#include "Leds.h"
+
 static BLEUUID serviceUUID(BLEUUID((uint16_t)0x180d)); // BLE Heart Rate Service
 static BLEUUID hrCharUUID(BLEUUID((uint16_t)0x2A37));  // BLE Heart Rate Measure Characteristic
 
@@ -43,6 +45,15 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 static void handleHeartRate(uint8_t hr)
 {
 	Serial.printf("My HR is %dbpm\n", hr);
+
+	if (hr < 63)
+	{
+		Leds::trigger(Leds::HrTrigger::EnteringZ1HIGH);
+	}
+	else if (hr >= 63)
+	{
+		Leds::trigger(Leds::HrTrigger::EnteringZ2LOW);
+	}
 }
 
 // BLE Heart Rate Measure Callback
@@ -93,6 +104,11 @@ void setup()
 {
 	Serial.begin(115200);
 
+	Leds::indicatorLed.begin();
+	Leds::indicatorLed.show(); // Initialize all pixels to 'off'
+
+	Leds::addTransitions();
+
 	// BLE setup
 	BLEDevice::init("");
 	BLEScan *pBLEScan = BLEDevice::getScan();
@@ -115,6 +131,8 @@ void loop()
 		}
 		doConnect = false;
 	}
+
+	Leds::fsm.run_machine();
 
 	// Perform Scan
 	if (doScan)
