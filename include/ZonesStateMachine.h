@@ -1,3 +1,4 @@
+#pragma once
 #include <SimpleFsm.h>
 
 namespace ZonesStateMachine
@@ -16,97 +17,80 @@ namespace ZonesStateMachine
 		ZONE_DOWN,
 	};
 
+	enum StateName
+	{
+		STATE_BELOW_ZONE,
+		STATE_IN_ZONE,
+		STATE_ABOVE_ZONE,
+	};
+
 	elapsedMillis sinceEntered = 0;
 	elapsedMillis sinceFlashed = 0;
 	uint32_t zoneColour = Leds::COLOUR_OFF;
 
-	void enter_state_zone0()
+	void on_enter_belowZone()
 	{
-		Serial.printf("In state: zone0\n");
-		// sinceEntered = 0;
-		// zoneColour = Leds::COLOUR_GREY;
-		// Leds::setLed(zoneColour);
+		Serial.printf("In state: belowZone\n");
+
+		Leds::ledColour = Leds::COLOUR_HEADLIGHT_WHITE;
+		Leds::fsm.trigger(Leds::START_FLASHING);
 	}
 
-	void enter_state_zone1()
+	void on_state_below_zone()
 	{
-		Serial.printf("In state: zone1\n");
-		// sinceEntered = 0;
-		// zoneColour = Leds::COLOUR_GREY;
-		// Leds::setLed(zoneColour);
+		if (sinceEntered > 1000)
+		{
+			Leds::fsm.trigger(Leds::SOLID);
+		}
 	}
 
-	void enter_state_zone2()
+	void on_enter_inZone()
 	{
-		Serial.printf("In state: zone2\n");
-		// sinceEntered = 0;
-		// zoneColour = Leds::COLOUR_WHITE;
-		// Leds::setLed(zoneColour);
+		Serial.printf("In state: inZone\n");
+
+		Leds::ledColour = Leds::COLOUR_GREEN;
+		Leds::fsm.trigger(Leds::SOLID);
 	}
 
-	void enter_state_zone3()
+	void on_enter_aboveZone()
 	{
-		Serial.printf("In state: zone3\n");
-		// sinceEntered = 0;
-		// zoneColour = Leds::COLOUR_YELLOW;
-		// Leds::setLed(zoneColour);
+		Serial.printf("In state: aboveZone\n");
+
+		Leds::ledColour = Leds::COLOUR_RED;
+		Leds::fsm.trigger(Leds::START_FLASHING);
 	}
 
-	void enter_state_zone4()
+	void on_state_above_zone()
 	{
-		Serial.printf("In state: zone4\n");
-		// sinceEntered = 0;
-		// zoneColour = Leds::COLOUR_RED;
-		// Leds::setLed(zoneColour);
-	}
-
-	void enter_state_zone5()
-	{
-		// sinceEntered = 0;
-		// zoneColour = Leds::COLOUR_DARK_RED;
-		// Leds::setLed(zoneColour);
-	}
-
-	void on_state()
-	{
-		// flash for first 2 beats?
+		if (sinceEntered > 1000)
+		{
+			Leds::fsm.trigger(Leds::SOLID);
+		}
 	}
 
 	State zone[] = {
-		State("stateZone0", &enter_state_zone0, &on_state),
-		State("stateZone1", &enter_state_zone1, &on_state),
-		State("stateZone2", &enter_state_zone2, &on_state),
-		State("stateZone3", &enter_state_zone3, &on_state),
-		State("stateZone4", &enter_state_zone4, &on_state),
-		State("stateZone5", &enter_state_zone5, &on_state),
+		State("stateBelowZone", &on_enter_belowZone, &on_state_below_zone),
+		State("stateInZone", &on_enter_inZone),
+		State("stateAboveZone", &on_enter_aboveZone, &on_state_above_zone),
 	};
 
 	void onRun()
 	{
-		if (fsm.getPreviousState() != nullptr)
-			Serial.printf("onRun called (passed onGuard)\n- from state: %s \n- previous state: %s\n",
-						  fsm.getState()->getName(), // gets state before transition
-						  fsm.getPreviousState()->getName());
+		sinceEntered = 0;
 	}
 
 	bool onGuard()
 	{
-		// Serial.printf("onGuard called");
+		Serial.printf("Checking onGuard()\n");
 		return true;
 	}
 
 	Transition transitions[] = {
-		Transition(&zone[0], &zone[1], Trigger::ZONE_UP, &onRun, "transition zone 0 to 1", &onGuard),
+		Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_IN_ZONE], Trigger::ZONE_UP, &onRun, "transition into zone", &onGuard),
+		Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE], Trigger::ZONE_UP, &onRun, "transition out of zone (high)", &onGuard),
 
-		Transition(&zone[1], &zone[2], Trigger::ZONE_UP, &onRun, "transition zone 1 to 2", &onGuard),
-		Transition(&zone[2], &zone[3], Trigger::ZONE_UP, &onRun, "transition zone 0 to 1", &onGuard),
-		Transition(&zone[3], &zone[4], Trigger::ZONE_UP, &onRun, "transition zone 0 to 1", &onGuard),
-		Transition(&zone[4], &zone[5], Trigger::ZONE_UP, &onRun, "transition zone 0 to 1", &onGuard),
-
-		Transition(&zone[5], &zone[4], Trigger::ZONE_DOWN, &onRun, "transition zone 0 to 1", &onGuard),
-		Transition(&zone[4], &zone[3], Trigger::ZONE_DOWN, &onRun, "transition zone 0 to 1", &onGuard),
-		Transition(&zone[3], &zone[2], Trigger::ZONE_DOWN, &onRun, "transition zone 0 to 1", &onGuard),
-		Transition(&zone[2], &zone[1], Trigger::ZONE_DOWN, &onRun, "transition zone 0 to 1", &onGuard),
+		Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_IN_ZONE], Trigger::ZONE_DOWN, &onRun, "transition out of zone (high)", &onGuard),
+		Transition(&zone[STATE_IN_ZONE], &zone[STATE_BELOW_ZONE], Trigger::ZONE_DOWN, &onRun, "transition out of zone (high)", &onGuard),
 	};
 
 	void SetupFsm()
@@ -114,6 +98,6 @@ namespace ZonesStateMachine
 		int num_transitions = sizeof(transitions) / sizeof(Transition);
 		fsm.add(transitions, num_transitions);
 
-		fsm.setInitialState(&zone[0]);
+		fsm.setInitialState(&zone[STATE_IN_ZONE]);
 	}
 }

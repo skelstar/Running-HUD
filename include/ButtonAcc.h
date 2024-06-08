@@ -9,11 +9,13 @@ namespace ButtonAcc
 	void clickHandler(Button2 &btn)
 	{
 		Serial.printf("Acc Button clicked\n");
+		ZonesStateMachine::fsm.trigger(ZonesStateMachine::Trigger::ZONE_DOWN);
 	}
 
 	void longClickDetectedHandler(Button2 &btn)
 	{
-		Serial.printf("Acc Button long click\n");
+		// Serial.printf("Acc Button long click\n");
+		Leds::decreaseBrightness();
 	}
 
 	void initialise()

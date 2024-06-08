@@ -16,11 +16,12 @@ void setup()
 	Leds::hudLed.begin();
 	Leds::hudLed.show(); // Initialize all pixels to 'off'
 
-	Leds::setLed(Leds::COLOUR_GREEN);
+	Leds::setBrightness(Leds::BRIGHT_MED);
+	Leds::setLed(Leds::COLOUR_BLUE);
 
 	pinMode(M5_LED_PIN, OUTPUT);
 
-	// Leds::addTransitions();
+	Leds::SetupFsm();
 
 	ZonesStateMachine::SetupFsm();
 
@@ -39,11 +40,11 @@ void loop()
 {
 	Bluetooth::PerformConnection();
 
-	// Leds::fsm.run_machine();
 	ButtonMain::button.loop();
 	ButtonAcc::button.loop();
 
-	ZonesStateMachine::fsm.run(200);
+	ZonesStateMachine::fsm.run(100);
+	Leds::fsm.run(100);
 
 	if (sinceFlashedLed > 500)
 	{

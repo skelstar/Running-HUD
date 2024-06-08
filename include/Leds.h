@@ -1,4 +1,5 @@
-// #include <Fsm.h>
+#pragma once
+#include <SimpleFsm.h>
 #include <elapsedMillis.h>
 #include <Adafruit_NeoPixel.h>
 
@@ -17,6 +18,52 @@ namespace Leds
 	uint32_t COLOUR_RED = hudLed.Color(255, 0, 0);
 	uint32_t COLOUR_DARK_RED = hudLed.Color(100, 0, 0);
 	uint32_t COLOUR_GREEN = hudLed.Color(0, 255, 0);
+	uint32_t COLOUR_BLUE = hudLed.Color(0, 0, 255);
+
+	enum Brightness
+	{
+		BRIGHT_LOW,
+		BRIGHT_MED,
+		BRIGHT_HIGH
+	};
+
+	uint16_t flashingRateMs = 200;
+	bool flashingState = false;
+	uint8_t _brightness = BRIGHT_MED; // middle
+
+	void setBrightness(uint8_t brightness)
+	{
+		switch (brightness)
+		{
+		case BRIGHT_LOW:
+			_brightness = brightness;
+			hudLed.setBrightness(5);
+			hudLed.show();
+			break;
+		case BRIGHT_MED:
+			_brightness = brightness;
+			hudLed.setBrightness(30);
+			hudLed.show();
+			break;
+		case BRIGHT_HIGH:
+			_brightness = brightness;
+			hudLed.setBrightness(200);
+			hudLed.show();
+			break;
+		}
+	}
+
+	void increaseBrightness()
+	{
+		_brightness = _brightness != BRIGHT_LOW ? _brightness - 1 : _brightness;
+		setBrightness(_brightness);
+	}
+
+	void decreaseBrightness()
+	{
+		_brightness = _brightness != BRIGHT_HIGH ? _brightness + 1 : _brightness;
+		setBrightness(_brightness);
+	}
 
 	void setLed(uint32_t color)
 	{
@@ -24,80 +71,77 @@ namespace Leds
 		hudLed.show();
 	}
 
-	// enum StateID
-	// {
-	// 	ST_UNKNOWN = 0,
-	// 	ST_ONE,
-	// };
+	SimpleFSM fsm;
 
-	// enum Trigger
-	// {
-	// 	ZONE_UP,
-	// 	ZONE_DOWN,
-	// };
+	enum StateID
+	{
+		// ST_UNKNOWN = 0,
+		// ST_ONE,
+	};
 
-	// elapsedMillis sinceEntered = 0;
-	// elapsedMillis sinceFlashed = 0;
-	// uint32_t zoneColour = COLOUR_OFF;
+	enum Trigger
+	{
+		START_FLASHING,
+		SOLID,
+	};
 
-	// void enter_state_zone1()
-	// {
-	// 	sinceEntered = 0;
-	// 	zoneColour = COLOUR_GREY;
-	// 	setLed(zoneColour);
-	// }
+	enum StateName
+	{
+		STATE_FLASHING,
+		STATE_SOLID,
+	};
 
-	// void enter_state_zone2()
-	// {
-	// 	sinceEntered = 0;
-	// 	zoneColour = COLOUR_WHITE;
-	// 	setLed(zoneColour);
-	// }
+	elapsedMillis sinceEntered = 0;
+	elapsedMillis sinceFlashed = 0;
+	uint32_t ledColour = Leds::COLOUR_OFF;
 
-	// void enter_state_zone3()
-	// {
-	// 	sinceEntered = 0;
-	// 	zoneColour = COLOUR_YELLOW;
-	// 	setLed(zoneColour);
-	// }
+	void on_enter_flashing()
+	{
+		flashingState = false;
+		setLed(ledColour);
+	}
 
-	// void enter_state_zone4()
-	// {
-	// 	sinceEntered = 0;
-	// 	zoneColour = COLOUR_RED;
-	// 	setLed(zoneColour);
-	// }
+	void on_enter_solid()
+	{
+		setLed(ledColour);
+	}
 
-	// void enter_state_zone5()
-	// {
-	// 	sinceEntered = 0;
-	// 	zoneColour = COLOUR_DARK_RED;
-	// 	setLed(zoneColour);
-	// }
+	void on_state_flashing()
+	{
+		if (sinceEntered > flashingRateMs)
+		{
+			flashingState = !flashingState;
+			setLed(flashingState ? ledColour : COLOUR_OFF);
+		}
+	}
 
-	// void on_state()
-	// {
-	// 	// flash for first 2 beats?
-	// }
+	State zone[] = {
+		State("stateFlashing", &on_enter_flashing, &on_state_flashing),
+		State("stateSolid", &on_enter_solid),
+	};
 
-	// State stateZone1(&enter_state_zone1, &on_state, NULL);
-	// State stateZone2(&enter_state_zone2, &on_state, NULL);
-	// State stateZone3(&enter_state_zone3, &on_state, NULL);
-	// State stateZone4(&enter_state_zone4, &on_state, NULL);
-	// State stateZone5(&enter_state_zone5, &on_state, NULL);
+	void onRun()
+	{
+		sinceEntered = 0;
+	}
 
-	// Fsm fsm(&stateZone2);
+	bool onGuard()
+	{
+		return true;
+	}
 
-	// void addTransitions()
-	// {
-	// 	fsm.add_transition(&stateZone1, &stateZone2, Trigger::ZONE_UP, NULL);
-	// 	fsm.add_transition(&stateZone2, &stateZone3, Trigger::ZONE_UP, NULL);
-	// 	fsm.add_transition(&stateZone3, &stateZone4, Trigger::ZONE_UP, NULL);
-	// 	fsm.add_transition(&stateZone4, &stateZone5, Trigger::ZONE_UP, NULL);
+	Transition transitions[] = {
+		Transition(&zone[STATE_FLASHING], &zone[STATE_SOLID], Trigger::SOLID, &onRun, "", &onGuard),
+		Transition(&zone[STATE_SOLID], &zone[STATE_FLASHING], Trigger::START_FLASHING, &onRun, "", &onGuard),
 
-	// 	fsm.add_transition(&stateZone5, &stateZone4, Trigger::ZONE_DOWN, NULL);
-	// 	fsm.add_transition(&stateZone4, &stateZone3, Trigger::ZONE_DOWN, NULL);
-	// 	fsm.add_transition(&stateZone3, &stateZone2, Trigger::ZONE_DOWN, NULL);
-	// 	fsm.add_transition(&stateZone2, &stateZone1, Trigger::ZONE_DOWN, NULL);
-	// }
+		Transition(&zone[STATE_SOLID], &zone[STATE_SOLID], Trigger::SOLID, &onRun, "", &onGuard),
+	};
+
+	void SetupFsm()
+	{
+		int num_transitions = sizeof(transitions) / sizeof(Transition);
+		fsm.add(transitions, num_transitions);
+
+		fsm.setInitialState(&zone[STATE_SOLID]);
+	}
 }
