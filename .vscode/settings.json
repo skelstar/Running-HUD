@@ -19,7 +19,18 @@
     "titleBar.activeBackground": "#215732",
     "titleBar.activeForeground": "#e7e7e7",
     "titleBar.inactiveBackground": "#21573299",
-    "titleBar.inactiveForeground": "#e7e7e799"
+    "titleBar.inactiveForeground": "#e7e7e799",
+    "tab.activeBorder": "#2f7c47"
   },
-  "peacock.color": "#215732"
+  "peacock.color": "#215732",
+  "files.associations": {
+    "array": "cpp",
+    "deque": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "unordered_set": "cpp",
+    "vector": "cpp",
+    "string_view": "cpp",
+    "initializer_list": "cpp"
+  }
 }

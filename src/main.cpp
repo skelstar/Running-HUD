@@ -1,104 +1,13 @@
 #include <Arduino.h>
-#include "BLEDevice.h"
 
 #include "Leds.h"
+#include "ZonesStateMachine.h"
+#include "ButtonMain.h"
+#include "ButtonAcc.h"
 
-static BLEUUID serviceUUID(BLEUUID((uint16_t)0x180d)); // BLE Heart Rate Service
-static BLEUUID hrCharUUID(BLEUUID((uint16_t)0x2A37));  // BLE Heart Rate Measure Characteristic
+static void handleHeartRate(uint8_t hr);
 
-static boolean doScan = true;
-static boolean doConnect = false;
-static boolean connected = false;
-static BLEAdvertisedDevice *hrmDevice;
-static BLERemoteCharacteristic *pRemoteCharacteristic;
-
-class MyClientCallback : public BLEClientCallbacks
-{
-	void onConnect(BLEClient *pclient)
-	{
-		Serial.printf("%lu [info] Connected: %s\n", millis(), pclient->getPeerAddress().toString().c_str());
-	}
-
-	void onDisconnect(BLEClient *pclient)
-	{
-		connected = false;
-		doScan = true;
-		Serial.printf("%lu [info] Disconnected: %s\n", millis(), pclient->getPeerAddress().toString().c_str());
-	}
-};
-
-class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
-{
-	void onResult(BLEAdvertisedDevice advertisedDevice)
-	{
-		if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID))
-		{
-			Serial.printf("%lu [info] %s\n", millis(), advertisedDevice.toString().c_str());
-			BLEDevice::getScan()->stop();
-			hrmDevice = new BLEAdvertisedDevice(advertisedDevice);
-			doConnect = true;
-			doScan = false;
-		}
-	}
-};
-
-static void handleHeartRate(uint8_t hr)
-{
-	Serial.printf("My HR is %dbpm\n", hr);
-
-	if (hr < 63)
-	{
-		Leds::trigger(Leds::HrTrigger::EnteringZ1HIGH);
-	}
-	else if (hr >= 63)
-	{
-		Leds::trigger(Leds::HrTrigger::EnteringZ2LOW);
-	}
-}
-
-// BLE Heart Rate Measure Callback
-static void notifyCallback(
-	BLERemoteCharacteristic *pBLERemoteCharacteristic,
-	uint8_t *pData,
-	size_t length,
-	bool isNotify)
-{
-	handleHeartRate(pData[1]);
-}
-
-bool connectToServer()
-{
-	BLEClient *pClient = BLEDevice::createClient();
-	pClient->setClientCallbacks(new MyClientCallback());
-	pClient->connect(hrmDevice);
-
-	BLERemoteService *pRemoteService = pClient->getService(serviceUUID);
-	if (pRemoteService == nullptr)
-	{
-		pClient->disconnect();
-		return false;
-	}
-
-	pRemoteCharacteristic = pRemoteService->getCharacteristic(hrCharUUID);
-	if (pRemoteCharacteristic == nullptr)
-	{
-		pClient->disconnect();
-		return false;
-	}
-
-	if (pRemoteCharacteristic->canNotify())
-	{
-		pRemoteCharacteristic->registerForNotify(notifyCallback);
-	}
-	else
-	{
-		pClient->disconnect();
-		return false;
-	}
-
-	connected = true;
-	return true;
-}
+#include "Bluetooth.h"
 
 void setup()
 {
@@ -107,38 +16,39 @@ void setup()
 	Leds::indicatorLed.begin();
 	Leds::indicatorLed.show(); // Initialize all pixels to 'off'
 
-	Leds::addTransitions();
+	pinMode(M5_LED_PIN, OUTPUT);
+
+	// Leds::addTransitions();
+
+	ZonesStateMachine::SetupFsm();
+
+	ButtonMain::initialise();
+	ButtonAcc::initialise();
 
 	// BLE setup
-	BLEDevice::init("");
-	BLEScan *pBLEScan = BLEDevice::getScan();
-	pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-	pBLEScan->setInterval(1349);
-	pBLEScan->setWindow(449);
-	pBLEScan->setActiveScan(true);
+	Bluetooth::initialise();
 }
 
 int loopNum = 0;
+elapsedMillis sinceFlashedLed = 0;
+bool m5ledState = false;
 
 void loop()
 {
-	// Perform Connection
-	if (doConnect)
+	Bluetooth::PerformConnection();
+
+	// Leds::fsm.run_machine();
+	ButtonMain::button.loop();
+	ButtonAcc::button.loop();
+
+	ZonesStateMachine::fsm.run(200);
+
+	if (sinceFlashedLed > 500)
 	{
-		if (!connectToServer())
-		{
-			Serial.printf("%lu [error] Failed to connect to HRM.\n", millis());
-		}
-		doConnect = false;
+		sinceFlashedLed = 0;
+		m5ledState = !m5ledState;
+		digitalWrite(M5_LED_PIN, m5ledState);
 	}
 
-	Leds::fsm.run_machine();
-
-	// Perform Scan
-	if (doScan)
-	{
-		Serial.printf("%lu [info] Performing Scan...\n", millis());
-		BLEDevice::getScan()->start(5, false);
-		delay(5000);
-	}
+	Bluetooth::PerformScan();
 }
