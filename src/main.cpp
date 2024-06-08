@@ -13,8 +13,10 @@ void setup()
 {
 	Serial.begin(115200);
 
-	Leds::indicatorLed.begin();
-	Leds::indicatorLed.show(); // Initialize all pixels to 'off'
+	Leds::hudLed.begin();
+	Leds::hudLed.show(); // Initialize all pixels to 'off'
+
+	Leds::setLed(Leds::COLOUR_GREEN);
 
 	pinMode(M5_LED_PIN, OUTPUT);
 

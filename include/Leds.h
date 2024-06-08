@@ -7,23 +7,21 @@
 
 namespace Leds
 {
-	Adafruit_NeoPixel indicatorLed = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRBW + NEO_KHZ800);
+	Adafruit_NeoPixel hudLed = Adafruit_NeoPixel(PIXEL_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
-	uint32_t COLOUR_OFF = indicatorLed.Color(0, 0, 0);
-	uint32_t COLOUR_GREY = indicatorLed.Color(10, 10, 10);
-	uint32_t COLOUR_WHITE = indicatorLed.Color(100, 100, 100);
-	uint32_t COLOUR_YELLOW = indicatorLed.Color(100, 255, 0);
-	uint32_t COLOUR_RED = indicatorLed.Color(255, 0, 0);
-	uint32_t COLOUR_DARK_RED = indicatorLed.Color(100, 0, 0);
-	uint32_t COLOUR_GREEN = indicatorLed.Color(0, 255, 0);
+	uint32_t COLOUR_OFF = hudLed.Color(0, 0, 0);
+	uint32_t COLOUR_GREY = hudLed.Color(10, 10, 10);
+	uint32_t COLOUR_WHITE = hudLed.Color(100, 100, 100);
+	uint32_t COLOUR_HEADLIGHT_WHITE = hudLed.Color(0, 0, 30, 255);
+	uint32_t COLOUR_YELLOW = hudLed.Color(100, 255, 0);
+	uint32_t COLOUR_RED = hudLed.Color(255, 0, 0);
+	uint32_t COLOUR_DARK_RED = hudLed.Color(100, 0, 0);
+	uint32_t COLOUR_GREEN = hudLed.Color(0, 255, 0);
 
-	void setindicator(uint32_t color)
+	void setLed(uint32_t color)
 	{
-		for (uint16_t i = 0; i < indicatorLed.numPixels(); i++)
-		{
-			indicatorLed.setPixelColor(i, color);
-		}
-		indicatorLed.show();
+		hudLed.setPixelColor(0, color);
+		hudLed.show();
 	}
 
 	// enum StateID
@@ -46,35 +44,35 @@ namespace Leds
 	// {
 	// 	sinceEntered = 0;
 	// 	zoneColour = COLOUR_GREY;
-	// 	setindicator(zoneColour);
+	// 	setLed(zoneColour);
 	// }
 
 	// void enter_state_zone2()
 	// {
 	// 	sinceEntered = 0;
 	// 	zoneColour = COLOUR_WHITE;
-	// 	setindicator(zoneColour);
+	// 	setLed(zoneColour);
 	// }
 
 	// void enter_state_zone3()
 	// {
 	// 	sinceEntered = 0;
 	// 	zoneColour = COLOUR_YELLOW;
-	// 	setindicator(zoneColour);
+	// 	setLed(zoneColour);
 	// }
 
 	// void enter_state_zone4()
 	// {
 	// 	sinceEntered = 0;
 	// 	zoneColour = COLOUR_RED;
-	// 	setindicator(zoneColour);
+	// 	setLed(zoneColour);
 	// }
 
 	// void enter_state_zone5()
 	// {
 	// 	sinceEntered = 0;
 	// 	zoneColour = COLOUR_DARK_RED;
-	// 	setindicator(zoneColour);
+	// 	setLed(zoneColour);
 	// }
 
 	// void on_state()
