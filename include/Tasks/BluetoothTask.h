@@ -14,7 +14,7 @@ namespace BluetoothTask
 
         while (1)
         {
-            Serial.println("BluetoothTask: Running");
+            // Serial.println("BluetoothTask: Running");
 
             Bluetooth::PerformConnection();
 
@@ -24,18 +24,3 @@ namespace BluetoothTask
         }
     }
 }
-
-// namespace BluetoothTask
-// {
-//     void taskRunner(void *pvParameters)
-//     {
-//         Serial.printf("Bluetooth Task started\n");
-
-//         while (1)
-//         {
-//             Serial.println("Bluetooth task running");
-
-//             vTaskDelay(100);
-//         }
-//     }
-// };

@@ -13,11 +13,32 @@ namespace Bluetooth
 	static BLEAdvertisedDevice *hrmDevice;
 	static BLERemoteCharacteristic *pRemoteCharacteristic;
 
+	enum ConnectionStatus
+	{
+		DISCONNECTED,
+		CONNECTED,
+	};
+
+	class Packet
+	{
+	public:
+		uint8_t status;
+		unsigned long id = -1;
+	} packet;
+
 	class MyClientCallback : public BLEClientCallbacks
 	{
 		void onConnect(BLEClient *pclient)
 		{
 			Serial.printf("%lu [info] Connected: %s\n", millis(), pclient->getPeerAddress().toString().c_str());
+
+			packet.id++;
+			packet.status = CONNECTED;
+			Packet *data;
+			data = &packet;
+
+			xQueueSend(xBluetoothQueue, (void *)&data, (TickType_t)1);
+			Serial.printf("xBluetoothQueue Send: CONNECTED id: %lu status: %d\n", packet.id, packet.status);
 		}
 
 		void onDisconnect(BLEClient *pclient)
@@ -25,6 +46,14 @@ namespace Bluetooth
 			connected = false;
 			doScan = true;
 			Serial.printf("%lu [info] Disconnected: %s\n", millis(), pclient->getPeerAddress().toString().c_str());
+
+			packet.id++;
+			packet.status = DISCONNECTED;
+			Packet *data;
+			data = &packet;
+
+			xQueueSend(xBluetoothQueue, (void *)&data, (TickType_t)1);
+			Serial.printf("xBluetoothQueue Send: DISCONNECTED id: %lu\n", packet.id);
 		}
 	};
 
@@ -47,13 +76,17 @@ namespace Bluetooth
 	{
 		Serial.printf("My HR is %dbpm\n", hr);
 
-		if (hr < 63)
+		if (hr < 100)
 		{
-			// Leds::trigger(Leds::HrTrigger::EnteringZ1HIGH);
+			ZonesStateMachine::fsm.trigger(ZonesStateMachine::Trigger::ZONE_BELOW);
 		}
-		else if (hr >= 63)
+		else if (hr >= 120)
 		{
-			// Leds::trigger(Leds::HrTrigger::EnteringZ2LOW);
+			ZonesStateMachine::fsm.trigger(ZonesStateMachine::Trigger::ZONE_ABOVE);
+		}
+		else
+		{
+			ZonesStateMachine::fsm.trigger(ZonesStateMachine::Trigger::ZONE_IN);
 		}
 	}
 

@@ -15,6 +15,10 @@ namespace ZonesStateMachine
 	{
 		ZONE_UP,
 		ZONE_DOWN,
+		BLE_DISCONNECTED,
+		ZONE_BELOW,
+		ZONE_IN,
+		ZONE_ABOVE,
 	};
 
 	enum StateName
@@ -22,6 +26,7 @@ namespace ZonesStateMachine
 		STATE_BELOW_ZONE,
 		STATE_IN_ZONE,
 		STATE_ABOVE_ZONE,
+		STATE_BLE_DISCONNECTED,
 	};
 
 	elapsedMillis sinceEntered = 0;
@@ -68,10 +73,19 @@ namespace ZonesStateMachine
 		}
 	}
 
+	void on_enter_ble_disconnected()
+	{
+		Serial.printf("In state: ble_disconnected\n");
+
+		Leds::ledColour = Leds::COLOUR_BLUE;
+		Leds::fsm.trigger(Leds::START_FLASHING);
+	}
+
 	State zone[] = {
 		State("stateBelowZone", &on_enter_belowZone, &on_state_below_zone),
 		State("stateInZone", &on_enter_inZone),
 		State("stateAboveZone", &on_enter_aboveZone, &on_state_above_zone),
+		State("stateBleDisconnected", &on_enter_ble_disconnected),
 	};
 
 	void onRun()
@@ -81,16 +95,29 @@ namespace ZonesStateMachine
 
 	bool onGuard()
 	{
-		Serial.printf("Checking onGuard()\n");
+		// Serial.printf("Checking onGuard()\n");
 		return true;
 	}
 
 	Transition transitions[] = {
-		Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_IN_ZONE], Trigger::ZONE_UP, &onRun, "transition into zone", &onGuard),
-		Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE], Trigger::ZONE_UP, &onRun, "transition out of zone (high)", &onGuard),
+		// ZONE_IN
+		Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_IN_ZONE], Trigger::ZONE_IN, &onRun, "transition into zone", &onGuard),
+		Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_IN_ZONE], Trigger::ZONE_IN, &onRun, "transition out of zone (high)", &onGuard),
+		Transition(&zone[STATE_BLE_DISCONNECTED], &zone[STATE_IN_ZONE], Trigger::ZONE_IN, &onRun),
 
-		Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_IN_ZONE], Trigger::ZONE_DOWN, &onRun, "transition out of zone (high)", &onGuard),
-		Transition(&zone[STATE_IN_ZONE], &zone[STATE_BELOW_ZONE], Trigger::ZONE_DOWN, &onRun, "transition out of zone (high)", &onGuard),
+		// ZONE_BELOW
+		Transition(&zone[STATE_IN_ZONE], &zone[STATE_BELOW_ZONE], Trigger::ZONE_BELOW, &onRun, "transition out of zone (high)", &onGuard),
+		Transition(&zone[STATE_BLE_DISCONNECTED], &zone[STATE_BELOW_ZONE], Trigger::ZONE_BELOW, &onRun),
+
+		// ZONE_ABOVE
+		Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE], Trigger::ZONE_ABOVE, &onRun, "transition out of zone (high)", &onGuard),
+		Transition(&zone[STATE_BLE_DISCONNECTED], &zone[STATE_ABOVE_ZONE], Trigger::ZONE_ABOVE, &onRun),
+
+		// BLE_DISCONNECTED
+		Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_BLE_DISCONNECTED], Trigger::BLE_DISCONNECTED, &onRun),
+		Transition(&zone[STATE_IN_ZONE], &zone[STATE_BLE_DISCONNECTED], Trigger::BLE_DISCONNECTED, &onRun),
+		Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_BLE_DISCONNECTED], Trigger::BLE_DISCONNECTED, &onRun),
+
 	};
 
 	void SetupFsm()
@@ -98,6 +125,6 @@ namespace ZonesStateMachine
 		int num_transitions = sizeof(transitions) / sizeof(Transition);
 		fsm.add(transitions, num_transitions);
 
-		fsm.setInitialState(&zone[STATE_IN_ZONE]);
+		fsm.setInitialState(&zone[STATE_BLE_DISCONNECTED]);
 	}
 }

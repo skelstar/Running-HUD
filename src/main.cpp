@@ -2,6 +2,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "Types.h"
+
 #include "Leds.h"
 #include "ZonesStateMachine.h"
 #include "ButtonMain.h"
@@ -9,44 +11,55 @@
 
 static void handleHeartRate(uint8_t hr);
 
+// Queues
+QueueHandle_t xBluetoothQueue;
+
 TaskHandle_t bluetoothTaskHandle = NULL;
+TaskHandle_t ledsTaskHandle = NULL;
+TaskHandle_t zonesTaskHandle = NULL;
 
 #include "Bluetooth.h"
 #include "Tasks/BluetoothTask.h"
+#include "Tasks/LedsTask.h"
+#include "Tasks/ZonesStateMachineTask.h"
 
 void setup()
 {
 	Serial.begin(115200);
 
-	// Leds::hudLed.begin();
-	// Leds::hudLed.show(); // Initialize all pixels to 'off'
-
-	// Leds::setBrightness(Leds::BRIGHT_MED);
-	// Leds::setLed(Leds::COLOUR_BLUE);
+	xBluetoothQueue = xQueueCreate(1, sizeof(Bluetooth::Packet *));
 
 	pinMode(M5_LED_PIN, OUTPUT);
-
-	// Leds::SetupFsm();
-
-	// ZonesStateMachine::SetupFsm();
 
 	// ButtonMain::initialise();
 	// ButtonAcc::initialise();
 
-	// vTaskDelay(200);
 	xTaskCreatePinnedToCore(
 		BluetoothTask::task1,
-		"BluetoothTask1",
+		"BluetoothTask",
 		/*stack depth*/ 4096,
 		/*params*/ NULL,
 		/*priority*/ 1,
 		&bluetoothTaskHandle,
 		/*core*/ 1);
 
-	// vTaskStartScheduler();
+	xTaskCreatePinnedToCore(
+		LedsTask::task1,
+		"LedsTask",
+		/*stack depth*/ 8000,
+		/*params*/ NULL,
+		/*priority*/ 1,
+		&ledsTaskHandle,
+		/*core*/ 1);
 
-	// BLE setup
-	// Bluetooth::initialise();
+	xTaskCreatePinnedToCore(
+		ZonesStateMachineTask::task1,
+		"ZonesTask",
+		/*stack depth*/ 2048,
+		/*params*/ NULL,
+		/*priority*/ 1,
+		&zonesTaskHandle,
+		/*core*/ 1);
 }
 
 int loopNum = 0;
@@ -55,13 +68,8 @@ bool m5ledState = false;
 
 void loop()
 {
-	// Bluetooth::PerformConnection();
-
 	// ButtonMain::button.loop();
 	// ButtonAcc::button.loop();
-
-	// ZonesStateMachine::fsm.run(100);
-	// Leds::fsm.run(100);
 
 	if (sinceFlashedLed > 500)
 	{
