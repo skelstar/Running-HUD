@@ -9,7 +9,6 @@ namespace ButtonMain
 	void clickHandler(Button2 &btn)
 	{
 		Serial.printf("Main Button clicked\n");
-		// ZonesStateMachine::fsm.trigger(ZonesStateMachine::Trigger::ZONE_UP);
 	}
 
 	void longClickDetectedHandler(Button2 &btn)

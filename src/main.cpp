@@ -5,7 +5,6 @@
 #include "Types.h"
 
 #include "Leds.h"
-#include "ZonesStateMachine.h"
 #include "ButtonMain.h"
 #include "ButtonAcc.h"
 
@@ -21,7 +20,6 @@ TaskHandle_t zonesTaskHandle = NULL;
 #include "Bluetooth.h"
 #include "Tasks/BluetoothTask.h"
 #include "Tasks/LedsTask.h"
-#include "Tasks/ZonesStateMachineTask.h"
 
 void setup()
 {
@@ -51,15 +49,6 @@ void setup()
 		/*priority*/ 1,
 		&ledsTaskHandle,
 		/*core*/ 1);
-
-	// xTaskCreatePinnedToCore(
-	// 	ZonesStateMachineTask::task1,
-	// 	"ZonesTask",
-	// 	/*stack depth*/ 2048,
-	// 	/*params*/ NULL,
-	// 	/*priority*/ 1,
-	// 	&zonesTaskHandle,
-	// 	/*core*/ 1);
 }
 
 int loopNum = 0;
