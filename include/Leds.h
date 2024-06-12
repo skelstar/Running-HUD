@@ -37,12 +37,12 @@ namespace Leds
 		{
 		case BRIGHT_LOW:
 			_brightness = brightness;
-			hudLed.setBrightness(5);
+			hudLed.setBrightness(2);
 			hudLed.show();
 			break;
 		case BRIGHT_MED:
 			_brightness = brightness;
-			hudLed.setBrightness(30);
+			hudLed.setBrightness(20);
 			hudLed.show();
 			break;
 		case BRIGHT_HIGH:
@@ -51,6 +51,13 @@ namespace Leds
 			hudLed.show();
 			break;
 		}
+		Serial.printf("Brightness now: %d\n", hudLed.getBrightness());
+	}
+
+	void cycleBrightness()
+	{
+		_brightness = _brightness != BRIGHT_LOW ? _brightness - 1 : BRIGHT_MAX;
+		setBrightness(_brightness);
 	}
 
 	void increaseBrightness()

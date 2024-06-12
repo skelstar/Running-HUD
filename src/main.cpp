@@ -5,19 +5,21 @@
 #include "Types.h"
 
 #include "Leds.h"
-#include "ButtonMain.h"
-#include "ButtonAcc.h"
 
 static void handleHeartRate(uint8_t hr);
 
 // Queues
 QueueHandle_t xBluetoothQueue;
+QueueHandle_t xButtonQueue;
 
 TaskHandle_t bluetoothTaskHandle = NULL;
 TaskHandle_t ledsTaskHandle = NULL;
 TaskHandle_t zonesTaskHandle = NULL;
 
+#include "ButtonMain.h"
+#include "ButtonAcc.h"
 #include "Bluetooth.h"
+
 #include "Tasks/BluetoothTask.h"
 #include "Tasks/LedsTask.h"
 
@@ -26,11 +28,12 @@ void setup()
 	Serial.begin(115200);
 
 	xBluetoothQueue = xQueueCreate(1, sizeof(Bluetooth::Packet *));
+	xButtonQueue = xQueueCreate(1, sizeof(ButtonPacket *));
 
 	pinMode(M5_LED_PIN, OUTPUT);
 
-	// ButtonMain::initialise();
-	// ButtonAcc::initialise();
+	ButtonMain::initialise();
+	ButtonAcc::initialise();
 
 	xTaskCreatePinnedToCore(
 		BluetoothTask::task1,
@@ -57,8 +60,8 @@ bool m5ledState = false;
 
 void loop()
 {
-	// ButtonMain::button.loop();
-	// ButtonAcc::button.loop();
+	ButtonMain::button.loop();
+	ButtonAcc::button.loop();
 
 	if (sinceFlashedLed > 500)
 	{

@@ -6,11 +6,13 @@
 
 namespace LedsTask
 {
+    void handleButtonPacket(ButtonPacket *packet);
     void handlePacket(Bluetooth::Packet *packet);
 
     void task1(void *pvParameters)
     {
         unsigned long blePacketId = -1;
+        unsigned long buttonPacketId = -1;
 
         Serial.println("LedsTask: Started");
 
@@ -36,9 +38,34 @@ namespace LedsTask
                 }
             }
 
+            ButtonPacket *buttonPacket = nullptr;
+            if (xQueuePeek(xButtonQueue, &(buttonPacket), TICKS_50ms) == pdTRUE)
+            {
+                if (buttonPacket->id != buttonPacketId)
+                {
+                    buttonPacketId = buttonPacket->id;
+
+                    handleButtonPacket(buttonPacket);
+                }
+            }
+
             Leds::fsm.run(100);
 
             vTaskDelay(TICKS_50ms); // Delay for 500 ms
+        }
+    }
+
+    void handleButtonPacket(ButtonPacket *packet)
+    {
+        switch (packet->button)
+        {
+        case ButtonOption::ACC_BTN:
+            Serial.printf("(LedsTask) xButtonQueue rxd: ACC_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
+            Leds::cycleBrightness();
+            break;
+        case ButtonOption::MAIN_BTN:
+            Serial.printf("(LedsTask) xButtonQueue rxd: MAIN_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
+            break;
         }
     }
 

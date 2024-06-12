@@ -8,3 +8,23 @@ const TickType_t TICKS_100ms = 100 / portTICK_PERIOD_MS;
 const TickType_t TICKS_500ms = 500 / portTICK_PERIOD_MS;
 const TickType_t TICKS_1s = 1000 / portTICK_PERIOD_MS;
 const TickType_t TICKS_2s = 2000 / portTICK_PERIOD_MS;
+
+class ButtonPacket
+{
+public:
+    unsigned long id = -1;
+    uint8_t button;
+    uint8_t event;
+};
+
+enum ButtonOption
+{
+    ACC_BTN,
+    MAIN_BTN,
+};
+
+enum ButtonEvent
+{
+    CLICK,
+    LONGCLICK,
+};

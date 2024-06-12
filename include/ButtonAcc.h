@@ -6,15 +6,35 @@ namespace ButtonAcc
 
 	Button2 button;
 
+	ButtonPacket packet;
+
+	void sendPacket(ButtonPacket *packet)
+	{
+		ButtonPacket *data;
+		data = packet;
+		xQueueSend(xButtonQueue, (void *)&data, TICKS_10ms);
+	}
+
 	void clickHandler(Button2 &btn)
 	{
 		Serial.printf("Acc Button clicked\n");
+
+		packet.id++;
+		packet.button = ButtonOption::ACC_BTN;
+		packet.event = CLICK;
+
+		sendPacket(&packet);
 	}
 
 	void longClickDetectedHandler(Button2 &btn)
 	{
-		// Serial.printf("Acc Button long click\n");
-		Leds::decreaseBrightness();
+		Serial.printf("Acc Button long click\n");
+
+		packet.id++;
+		packet.button = ButtonOption::ACC_BTN;
+		packet.event = LONGCLICK;
+
+		sendPacket(&packet);
 	}
 
 	void initialise()
