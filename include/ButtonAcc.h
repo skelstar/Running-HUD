@@ -1,3 +1,4 @@
+#pragma once
 #include <Button2.h>
 
 namespace ButtonAcc

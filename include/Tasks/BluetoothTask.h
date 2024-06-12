@@ -3,24 +3,26 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include "Bluetooth.h"
+
 namespace BluetoothTask
 {
+    TaskHandle_t taskHandle = NULL;
+    const char *taskName = "BluetoothTask";
+
     void task1(void *pvParameters)
     {
-        // (void)pvParameters;
-        Serial.println("BluetoothTask: Started");
+        Serial.printf("%s: Started\n", taskName);
 
         Bluetooth::initialise();
 
         while (1)
         {
-            // Serial.println("BluetoothTask: Running");
-
             Bluetooth::PerformConnection();
 
             Bluetooth::PerformScan();
 
-            vTaskDelay(500 / portTICK_PERIOD_MS); // Delay for 500 ms
+            vTaskDelay(TICKS_100ms);
         }
     }
 }

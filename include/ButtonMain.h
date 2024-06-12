@@ -1,3 +1,4 @@
+#pragma once
 #include <Button2.h>
 
 namespace ButtonMain
@@ -6,15 +7,35 @@ namespace ButtonMain
 
 	Button2 button;
 
+	ButtonPacket packet;
+
+	void sendPacket(ButtonPacket *packet)
+	{
+		ButtonPacket *data;
+		data = packet;
+		xQueueSend(xButtonQueue, (void *)&data, TICKS_10ms);
+	}
+
 	void clickHandler(Button2 &btn)
 	{
-		Serial.printf("Main Button clicked\n");
+		// Serial.printf("Main Button clicked\n");
+
+		packet.id++;
+		packet.button = ButtonOption::MAIN_BTN;
+		packet.event = CLICK;
+
+		sendPacket(&packet);
 	}
 
 	void longClickDetectedHandler(Button2 &btn)
 	{
-		Serial.printf("Main Button long click\n");
-		Leds::increaseBrightness();
+		// Serial.printf("Main Button long click\n");
+
+		packet.id++;
+		packet.button = ButtonOption::MAIN_BTN;
+		packet.event = LONGCLICK;
+
+		sendPacket(&packet);
 	}
 
 	void initialise()

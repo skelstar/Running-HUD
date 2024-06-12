@@ -50,13 +50,16 @@ namespace Leds
 			hudLed.setBrightness(200);
 			hudLed.show();
 			break;
+		default:
+			Serial.printf("Leds::setBrightness() OUT OF RANGE: %d\n", brightness);
+			return;
 		}
 		Serial.printf("Brightness now: %d\n", hudLed.getBrightness());
 	}
 
 	void cycleBrightness()
 	{
-		_brightness = _brightness != BRIGHT_LOW ? _brightness - 1 : BRIGHT_MAX;
+		_brightness = _brightness != BRIGHT_LOW ? _brightness - 1 : BRIGHT_HIGH;
 		setBrightness(_brightness);
 	}
 
@@ -96,12 +99,12 @@ namespace Leds
 #define FLASH_5050_MS 500
 #define FLASH_SHORT_MS 100
 #define FLASH_LONG_MS 3000
+#define FLASH_INFINITE -1
 
 	elapsedMillis sinceEntered = 0;
 	elapsedMillis sinceFlashed = 0;
 	uint32_t ledColour = Leds::COLOUR_OFF;
 	uint8_t flashCounter = 0;
-	uint8_t offMultiplier = 1;
 	uint16_t flashOnMs = FLASH_SHORT_MS, flashOffMs = FLASH_LONG_MS;
 
 	void on_enter_flashing()
@@ -123,7 +126,6 @@ namespace Leds
 		{
 			flashingState = !flashingState;
 			setLed(flashingState ? ledColour : COLOUR_OFF);
-			// Serial.printf("flashingMarkMs: %d %d\n", flashingMarkMs, offMultiplier);
 			sinceFlashed = 0;
 		}
 	}
@@ -166,6 +168,9 @@ namespace Leds
 		fsm.add(transitions, num_transitions);
 
 		ledColour = COLOUR_BLUE;
+		flashOffMs = FLASH_5050_MS;
+		flashOnMs = FLASH_5050_MS;
+		flashCounter = -1; // infinite
 		fsm.setInitialState(&zone[STATE_FLASHING]);
 	}
 }

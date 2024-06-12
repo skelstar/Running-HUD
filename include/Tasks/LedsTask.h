@@ -6,6 +6,9 @@
 
 namespace LedsTask
 {
+    TaskHandle_t taskHandle = nullptr;
+    const char *taskName = "LedsTask";
+
     void handleButtonPacket(ButtonPacket *packet);
     void handlePacket(Bluetooth::Packet *packet);
 
@@ -14,7 +17,7 @@ namespace LedsTask
         unsigned long blePacketId = -1;
         unsigned long buttonPacketId = -1;
 
-        Serial.println("LedsTask: Started");
+        Serial.printf("%s: Started\n", taskName);
 
         Leds::hudLed.begin();
         Leds::hudLed.show();
@@ -49,7 +52,7 @@ namespace LedsTask
                 }
             }
 
-            Leds::fsm.run(100);
+            Leds::fsm.run(50);
 
             vTaskDelay(TICKS_50ms); // Delay for 500 ms
         }
