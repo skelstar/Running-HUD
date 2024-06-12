@@ -17,6 +17,9 @@ namespace Bluetooth
 	{
 		DISCONNECTED,
 		CONNECTED,
+		BELOW_ZONE,
+		IN_ZONE,
+		ABOVE_ZONE,
 	};
 
 	class Packet
@@ -78,16 +81,21 @@ namespace Bluetooth
 
 		if (hr < 100)
 		{
-			ZonesStateMachine::fsm.trigger(ZonesStateMachine::Trigger::ZONE_BELOW);
+			packet.status = BELOW_ZONE;
 		}
 		else if (hr >= 120)
 		{
-			ZonesStateMachine::fsm.trigger(ZonesStateMachine::Trigger::ZONE_ABOVE);
+			packet.status = IN_ZONE;
 		}
 		else
 		{
-			ZonesStateMachine::fsm.trigger(ZonesStateMachine::Trigger::ZONE_IN);
+			packet.status = ABOVE_ZONE;
 		}
+		packet.id++;
+		Packet *data;
+		data = &packet;
+
+		xQueueSend(xBluetoothQueue, (void *)&data, (TickType_t)1);
 	}
 
 	// BLE Heart Rate Measure Callback

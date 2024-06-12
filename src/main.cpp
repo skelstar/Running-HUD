@@ -52,14 +52,14 @@ void setup()
 		&ledsTaskHandle,
 		/*core*/ 1);
 
-	xTaskCreatePinnedToCore(
-		ZonesStateMachineTask::task1,
-		"ZonesTask",
-		/*stack depth*/ 2048,
-		/*params*/ NULL,
-		/*priority*/ 1,
-		&zonesTaskHandle,
-		/*core*/ 1);
+	// xTaskCreatePinnedToCore(
+	// 	ZonesStateMachineTask::task1,
+	// 	"ZonesTask",
+	// 	/*stack depth*/ 2048,
+	// 	/*params*/ NULL,
+	// 	/*priority*/ 1,
+	// 	&zonesTaskHandle,
+	// 	/*core*/ 1);
 }
 
 int loopNum = 0;

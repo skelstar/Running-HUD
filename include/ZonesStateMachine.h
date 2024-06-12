@@ -31,6 +31,7 @@ namespace ZonesStateMachine
 
 	elapsedMillis sinceEntered = 0;
 	elapsedMillis sinceFlashed = 0;
+	elapsedMillis sinceOnState = 0;
 	uint32_t zoneColour = Leds::COLOUR_OFF;
 
 	void on_enter_belowZone()
@@ -38,15 +39,11 @@ namespace ZonesStateMachine
 		Serial.printf("In state: belowZone\n");
 
 		Leds::ledColour = Leds::COLOUR_HEADLIGHT_WHITE;
-		Leds::fsm.trigger(Leds::START_FLASHING);
+		Leds::fsm.trigger(Leds::SLOW_FLASHES);
 	}
 
 	void on_state_below_zone()
 	{
-		if (sinceEntered > 1000)
-		{
-			Leds::fsm.trigger(Leds::SOLID);
-		}
 	}
 
 	void on_enter_inZone()
@@ -54,7 +51,11 @@ namespace ZonesStateMachine
 		Serial.printf("In state: inZone\n");
 
 		Leds::ledColour = Leds::COLOUR_GREEN;
-		Leds::fsm.trigger(Leds::SOLID);
+		Leds::fsm.trigger(Leds::SLOW_FLASHES);
+	}
+
+	void on_state_inZone()
+	{
 	}
 
 	void on_enter_aboveZone()
@@ -72,6 +73,7 @@ namespace ZonesStateMachine
 			Leds::fsm.trigger(Leds::SOLID);
 		}
 	}
+#pragma end region
 
 	void on_enter_ble_disconnected()
 	{
@@ -106,6 +108,7 @@ namespace ZonesStateMachine
 		Transition(&zone[STATE_BLE_DISCONNECTED], &zone[STATE_IN_ZONE], Trigger::ZONE_IN, &onRun),
 
 		// ZONE_BELOW
+		Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_BELOW_ZONE], Trigger::ZONE_BELOW, &onRun, "transition into zone", &onGuard),
 		Transition(&zone[STATE_IN_ZONE], &zone[STATE_BELOW_ZONE], Trigger::ZONE_BELOW, &onRun, "transition out of zone (high)", &onGuard),
 		Transition(&zone[STATE_BLE_DISCONNECTED], &zone[STATE_BELOW_ZONE], Trigger::ZONE_BELOW, &onRun),
 

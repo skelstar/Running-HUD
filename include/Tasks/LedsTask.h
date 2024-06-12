@@ -32,7 +32,7 @@ namespace LedsTask
                 {
                     blePacketId = blePacket->id;
 
-                    // handlePacket(blePacket);
+                    handlePacket(blePacket);
                 }
             }
 
@@ -44,13 +44,29 @@ namespace LedsTask
 
     void handlePacket(Bluetooth::Packet *packet)
     {
-        Serial.printf("(LedsTask) xBluetoothQueue rxd: %s\n", packet->status ? "CONNECTED" : "DISCONNECTED");
-
         switch (packet->status)
         {
         case Bluetooth::CONNECTED:
+            Serial.printf("(LedsTask) xBluetoothQueue rxd: %s\n", packet->status ? "CONNECTED" : "DISCONNECTED");
+            Leds::ledColour = Leds::COLOUR_GREEN;
+            Leds::fsm.trigger(Leds::Trigger::SOLID);
             break;
         case Bluetooth::DISCONNECTED:
+            Serial.printf("(LedsTask) xBluetoothQueue rxd: %s\n", packet->status ? "CONNECTED" : "DISCONNECTED");
+            Leds::ledColour = Leds::COLOUR_BLUE;
+            Leds::fsm.trigger(Leds::Trigger::START_FLASHING);
+            break;
+        case Bluetooth::BELOW_ZONE:
+            Leds::ledColour = Leds::COLOUR_HEADLIGHT_WHITE;
+            Leds::fsm.trigger(Leds::Trigger::SLOW_FLASHES);
+            break;
+        case Bluetooth::IN_ZONE:
+            Leds::ledColour = Leds::COLOUR_GREEN;
+            Leds::fsm.trigger(Leds::Trigger::SLOW_FLASHES);
+            break;
+        case Bluetooth::ABOVE_ZONE:
+            Leds::ledColour = Leds::COLOUR_RED;
+            Leds::fsm.trigger(Leds::Trigger::START_FLASHING);
             break;
         }
     }

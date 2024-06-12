@@ -73,15 +73,10 @@ namespace Leds
 
 	SimpleFSM fsm;
 
-	enum StateID
-	{
-		// ST_UNKNOWN = 0,
-		// ST_ONE,
-	};
-
 	enum Trigger
 	{
 		START_FLASHING,
+		SLOW_FLASHES,
 		SOLID,
 	};
 
@@ -91,9 +86,16 @@ namespace Leds
 		STATE_SOLID,
 	};
 
+#define FLASH_5050_MS 500
+#define FLASH_SHORT_MS 100
+#define FLASH_LONG_MS 3000
+
 	elapsedMillis sinceEntered = 0;
 	elapsedMillis sinceFlashed = 0;
 	uint32_t ledColour = Leds::COLOUR_OFF;
+	uint8_t flashCounter = 0;
+	uint8_t offMultiplier = 1;
+	uint16_t flashOnMs = FLASH_SHORT_MS, flashOffMs = FLASH_LONG_MS;
 
 	void on_enter_flashing()
 	{
@@ -108,10 +110,14 @@ namespace Leds
 
 	void on_state_flashing()
 	{
-		if (sinceEntered > flashingRateMs)
+		uint16_t flashingMarkMs = flashingState ? flashOnMs : flashOffMs;
+
+		if (sinceFlashed > flashingMarkMs)
 		{
 			flashingState = !flashingState;
 			setLed(flashingState ? ledColour : COLOUR_OFF);
+			// Serial.printf("flashingMarkMs: %d %d\n", flashingMarkMs, offMultiplier);
+			sinceFlashed = 0;
 		}
 	}
 
@@ -123,6 +129,15 @@ namespace Leds
 	void onRun()
 	{
 		sinceEntered = 0;
+		flashOnMs = FLASH_5050_MS;
+		flashOffMs = FLASH_5050_MS;
+	}
+
+	void runSlowFlashes()
+	{
+		sinceEntered = 0;
+		flashOnMs = FLASH_SHORT_MS;
+		flashOffMs = FLASH_LONG_MS;
 	}
 
 	bool onGuard()
@@ -133,6 +148,7 @@ namespace Leds
 	Transition transitions[] = {
 		Transition(&zone[STATE_FLASHING], &zone[STATE_SOLID], Trigger::SOLID, &onRun, "", &onGuard),
 		Transition(&zone[STATE_SOLID], &zone[STATE_FLASHING], Trigger::START_FLASHING, &onRun, "", &onGuard),
+		Transition(&zone[STATE_SOLID], &zone[STATE_FLASHING], Trigger::SLOW_FLASHES, &runSlowFlashes, "", &onGuard),
 
 		Transition(&zone[STATE_SOLID], &zone[STATE_SOLID], Trigger::SOLID, &onRun, "", &onGuard),
 	};
@@ -142,6 +158,7 @@ namespace Leds
 		int num_transitions = sizeof(transitions) / sizeof(Transition);
 		fsm.add(transitions, num_transitions);
 
-		fsm.setInitialState(&zone[STATE_SOLID]);
+		ledColour = COLOUR_BLUE;
+		fsm.setInitialState(&zone[STATE_FLASHING]);
 	}
 }
