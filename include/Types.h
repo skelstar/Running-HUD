@@ -21,10 +21,12 @@ enum ButtonOption
 {
     ACC_BTN,
     MAIN_BTN,
+    ACCEL,
 };
 
 enum ButtonEvent
 {
     CLICK,
     LONGCLICK,
+    DOUBLE_TAP,
 };

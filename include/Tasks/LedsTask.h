@@ -69,6 +69,9 @@ namespace LedsTask
         case ButtonOption::MAIN_BTN:
             Serial.printf("(LedsTask) xButtonQueue rxd: MAIN_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
             break;
+        case ButtonOption::ACCEL:
+            Serial.printf("(LedsTask) xButtonQueue rxd: ACCEL event: %s\n", packet->event == DOUBLE_TAP ? "DOUBLE_TAP" : "OTHER EVENT");
+            break;
         }
     }
 

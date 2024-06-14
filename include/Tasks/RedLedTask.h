@@ -20,13 +20,13 @@ namespace RedLedTask
 
         while (1)
         {
-            uint16_t blinkMs = m5ledState == 0 ? 100 : 2000;
-            if (sinceFlashedLed > blinkMs)
-            {
-                sinceFlashedLed = 0;
-                m5ledState = !m5ledState;
-                digitalWrite(M5_LED_PIN, m5ledState);
-            }
+            // uint16_t blinkMs = m5ledState == 0 ? 100 : 2000;
+            // if (sinceFlashedLed > blinkMs)
+            // {
+            //     sinceFlashedLed = 0;
+            //     m5ledState = !m5ledState;
+            //     digitalWrite(M5_LED_PIN, m5ledState);
+            // }
 
             vTaskDelay(TICKS_50ms);
         }
