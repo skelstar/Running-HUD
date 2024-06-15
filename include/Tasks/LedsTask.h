@@ -22,8 +22,7 @@ namespace LedsTask
         Leds::hudLed.begin();
         Leds::hudLed.show();
 
-        Leds::setBrightness(Leds::BRIGHT_MED);
-        // Leds::setLed(Leds::COLOUR_BLUE);
+        Leds::setBrightness(Leds::BRIGHT_LOW);
 
         Leds::SetupFsm();
 

@@ -12,9 +12,9 @@ namespace Leds
 
 	uint32_t COLOUR_OFF = hudLed.Color(0, 0, 0);
 	uint32_t COLOUR_GREY = hudLed.Color(0, 0, 0, 100);
-	uint32_t COLOUR_WHITE = hudLed.Color(100, 100, 100);
+	uint32_t COLOUR_WHITE = hudLed.Color(0, 0, 0, 255);
 	uint32_t COLOUR_HEADLIGHT_WHITE = hudLed.Color(0, 0, 30, 255);
-	uint32_t COLOUR_YELLOW = hudLed.Color(100, 255, 0);
+	uint32_t COLOUR_YELLOW = hudLed.Color(255, 255, 0);
 	uint32_t COLOUR_RED = hudLed.Color(255, 0, 0);
 	uint32_t COLOUR_DARK_RED = hudLed.Color(100, 0, 0);
 	uint32_t COLOUR_GREEN = hudLed.Color(0, 255, 0);
@@ -24,7 +24,19 @@ namespace Leds
 	{
 		BRIGHT_LOW,
 		BRIGHT_MED,
-		BRIGHT_HIGH
+		BRIGHT_HIGH,
+		BRIGHT_HIGHER,
+	};
+
+	enum FlashSchema
+	{
+		FLASHES_IN_SECOND,
+		FIFTY_FIFTY,
+	};
+
+	struct FlashPattern
+	{
+		uint8_t flashesPerSecond;
 	};
 
 	uint16_t flashingRateMs = 200;
@@ -37,17 +49,22 @@ namespace Leds
 		{
 		case BRIGHT_LOW:
 			_brightness = brightness;
-			hudLed.setBrightness(2);
+			hudLed.setBrightness(1);
 			hudLed.show();
 			break;
 		case BRIGHT_MED:
 			_brightness = brightness;
-			hudLed.setBrightness(20);
+			hudLed.setBrightness(3);
 			hudLed.show();
 			break;
 		case BRIGHT_HIGH:
 			_brightness = brightness;
-			hudLed.setBrightness(200);
+			hudLed.setBrightness(20);
+			hudLed.show();
+			break;
+		case BRIGHT_HIGHER:
+			_brightness = brightness;
+			hudLed.setBrightness(255);
 			hudLed.show();
 			break;
 		default:
@@ -59,19 +76,7 @@ namespace Leds
 
 	void cycleBrightness()
 	{
-		_brightness = _brightness != BRIGHT_LOW ? _brightness - 1 : BRIGHT_HIGH;
-		setBrightness(_brightness);
-	}
-
-	void increaseBrightness()
-	{
-		_brightness = _brightness != BRIGHT_LOW ? _brightness - 1 : _brightness;
-		setBrightness(_brightness);
-	}
-
-	void decreaseBrightness()
-	{
-		_brightness = _brightness != BRIGHT_HIGH ? _brightness + 1 : _brightness;
+		_brightness = _brightness != BRIGHT_LOW ? _brightness - 1 : BRIGHT_HIGHER;
 		setBrightness(_brightness);
 	}
 
@@ -85,9 +90,6 @@ namespace Leds
 
 	enum Trigger
 	{
-		START_FLASHING,
-		SLOW_FLASHES,
-		SOLID,
 		TR_DISCONNECTED,
 		TR_ZONE_1,
 		TR_ZONE_2,
@@ -98,10 +100,9 @@ namespace Leds
 
 	enum StateName
 	{
-		// STATE_FLASHING,
-		// STATE_SOLID,
 		STATE_DISCONNECTED,
 		STATE_ZONE1,
+		STATE_ZONE1_UP,
 		STATE_ZONE2,
 		STATE_ZONE3,
 		STATE_ZONE4,
@@ -115,23 +116,57 @@ namespace Leds
 
 	elapsedMillis sinceEntered = 0;
 	elapsedMillis sinceFlashed = 0;
+	elapsedMillis sinceFlashWindow = 0;
 	uint32_t ledColour = Leds::COLOUR_OFF;
 	uint8_t flashCounter = 0;
-	uint16_t flashOnMs = FLASH_SHORT_MS, flashOffMs = FLASH_LONG_MS;
 
 	struct CurrentZone
 	{
 		uint8_t number;
 		uint32_t colour;
+		FlashSchema schema;
+		uint8_t numFlashes = 2;
+		uint16_t flashWindow = TWO_SECONDS;
 	} thisZone;
 
-	void flashLed(uint16_t period)
+	void flashLed()
 	{
-		if (sinceFlashed > period)
+		flashingState = !flashingState;
+		setLed(flashingState ? ledColour : COLOUR_OFF);
+		sinceFlashed = 0;
+	}
+
+	void setZoneFlashes(uint8_t numFlashes, uint16_t period)
+	{
+		thisZone.schema = FLASHES_IN_SECOND;
+		thisZone.numFlashes = numFlashes;
+		thisZone.flashWindow = period;
+	}
+
+	void handleSchema(uint8_t schema)
+	{
+		switch (schema)
 		{
-			flashingState = !flashingState;
-			setLed(flashingState ? ledColour : COLOUR_OFF);
-			sinceFlashed = 0;
+		case FlashSchema::FLASHES_IN_SECOND:
+			if (sinceFlashed > 50 && flashCounter < thisZone.numFlashes)
+			{
+				flashLed();
+				if (flashingState == 0)
+					flashCounter++;
+			}
+			// time to start flashes again?
+			else if (sinceFlashWindow > thisZone.flashWindow)
+			{
+				sinceFlashWindow = 0;
+				flashCounter = 0;
+			}
+			break;
+		case FlashSchema::FIFTY_FIFTY:
+			if (sinceFlashed > FLASH_5050_MS)
+				flashLed();
+			break;
+		default:
+			Serial.printf("Unhandled schema: %d\n", schema);
 		}
 	}
 
@@ -140,26 +175,40 @@ namespace Leds
 		Serial.printf("on_enter_disconnected()\n");
 		ledColour = COLOUR_BLUE;
 		setLed(ledColour);
+		thisZone.schema = FlashSchema::FIFTY_FIFTY;
 	}
 
 	void on_in_disconnected()
 	{
-		flashLed(500);
+		handleSchema(thisZone.schema);
 	}
 
 	void on_enter_zone()
 	{
 		Serial.printf("on_enter_zone() zone %d\n", thisZone.number);
+		sinceEntered = 0;
+		flashCounter = 0;
 	}
 
 	void on_in_zone()
 	{
-		flashLed(500);
+		handleSchema(thisZone.schema);
 	}
+
+	// void on_enter_zone_up()
+	// {
+	// 	Serial.printf("on_enter_zone_up()\n");
+	// }
+
+	// void on_in_up_zone()
+	// {
+	// 	Serial.printf("on_in_up_zone()\n");
+	// }
 
 	State zone[] = {
 		State("stateDisconnected", &on_enter_disconnected, &on_in_disconnected),
 		State("stateZone1", &on_enter_zone, &on_in_zone),
+		// State("stateZone1_Up", &on_enter_zone_up, &on_in_up_zone),
 		State("stateZone2", &on_enter_zone, &on_in_zone),
 		State("stateZone3", &on_enter_zone, &on_in_zone),
 		State("stateZone4", &on_enter_zone, &on_in_zone),
@@ -168,48 +217,42 @@ namespace Leds
 
 	void onInZone1()
 	{
-		sinceEntered = 0;
 		thisZone.number = 1;
 		ledColour = COLOUR_GREY;
+		setZoneFlashes(1, FIVE_SECONDS);
 	}
 
 	void onInZone2()
 	{
-		sinceEntered = 0;
 		thisZone.number = 2;
-		ledColour = COLOUR_HEADLIGHT_WHITE;
+		ledColour = COLOUR_WHITE;
+		setZoneFlashes(1, THREE_SECONDS);
 	}
 
 	void onInZone3()
 	{
-		sinceEntered = 0;
 		thisZone.number = 3;
 		ledColour = COLOUR_YELLOW;
+		setZoneFlashes(3, TWO_SECONDS);
 	}
 
 	void onInZone4()
 	{
-		sinceEntered = 0;
 		thisZone.number = 4;
 		ledColour = COLOUR_RED;
+		setZoneFlashes(2, ONE_SECONDS);
 	}
 
 	void onInZone5()
 	{
-		sinceEntered = 0;
 		thisZone.number = 5;
 		ledColour = COLOUR_DARK_RED;
+		setZoneFlashes(3, ONE_SECONDS);
 	}
 
-	void onRun()
-	{
-		sinceEntered = 0;
-	}
-
-	bool onGuard()
-	{
-		return true;
-	}
+	// TimedTransition timedTransitions[] = {
+	// 	TimedTransition(&zone[STATE_ZONE1_UP], &zone[STATE_ZONE2], 1000),
+	// };
 
 	Transition transitions[] = {
 		// going UP
@@ -245,9 +288,6 @@ namespace Leds
 		fsm.add(transitions, num_transitions);
 
 		ledColour = COLOUR_BLUE;
-		flashOffMs = FLASH_5050_MS;
-		flashOnMs = FLASH_5050_MS;
-		flashCounter = -1; // infinite
 		fsm.setInitialState(&zone[STATE_DISCONNECTED]);
 	}
 }

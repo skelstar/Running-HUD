@@ -9,6 +9,12 @@ const TickType_t TICKS_500ms = 500 / portTICK_PERIOD_MS;
 const TickType_t TICKS_1s = 1000 / portTICK_PERIOD_MS;
 const TickType_t TICKS_2s = 2000 / portTICK_PERIOD_MS;
 
+const uint16_t ONE_SECONDS = 1000;
+const uint16_t TWO_SECONDS = 2000;
+const uint16_t THREE_SECONDS = 3000;
+const uint16_t FOUR_SECONDS = 4000;
+const uint16_t FIVE_SECONDS = 5000;
+
 class ButtonPacket
 {
 public:

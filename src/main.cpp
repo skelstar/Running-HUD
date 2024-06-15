@@ -42,7 +42,7 @@ void setup()
 	xTaskCreatePinnedToCore(
 		ButtonsTask::task1,
 		ButtonsTask::taskName,
-		/*stack depth*/ 1024,
+		/*stack depth*/ 2048,
 		/*params*/ NULL,
 		/*priority*/ 1,
 		&ButtonsTask::taskHandle,
