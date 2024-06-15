@@ -20,12 +20,18 @@ namespace Bluetooth
 		BELOW_ZONE,
 		IN_ZONE,
 		ABOVE_ZONE,
+		HZ_1,
+		HZ_2,
+		HZ_3,
+		HZ_4,
+		HZ_5,
 	};
 
 	class Packet
 	{
 	public:
 		uint8_t status;
+		uint8_t hr;
 		unsigned long id = -1;
 	} packet;
 
@@ -78,24 +84,12 @@ namespace Bluetooth
 	static void handleHeartRate(uint8_t hr)
 	{
 		Serial.printf("My HR is %dbpm\n", hr);
-
-		if (hr < 100)
-		{
-			packet.status = BELOW_ZONE;
-		}
-		else if (hr >= 120)
-		{
-			packet.status = IN_ZONE;
-		}
-		else
-		{
-			packet.status = ABOVE_ZONE;
-		}
 		packet.id++;
+		packet.hr = hr;
 		Packet *data;
 		data = &packet;
 
-		xQueueSend(xBluetoothQueue, (void *)&data, (TickType_t)1);
+		xQueueSend(xBluetoothQueue, (void *)&data, TICKS_5ms);
 	}
 
 	// BLE Heart Rate Measure Callback

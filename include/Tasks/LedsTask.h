@@ -23,7 +23,7 @@ namespace LedsTask
         Leds::hudLed.show();
 
         Leds::setBrightness(Leds::BRIGHT_MED);
-        Leds::setLed(Leds::COLOUR_BLUE);
+        // Leds::setLed(Leds::COLOUR_BLUE);
 
         Leds::SetupFsm();
 
@@ -80,26 +80,34 @@ namespace LedsTask
         switch (packet->status)
         {
         case Bluetooth::CONNECTED:
-            Serial.printf("(LedsTask) xBluetoothQueue rxd: %s\n", packet->status ? "CONNECTED" : "DISCONNECTED");
-            Leds::ledColour = Leds::COLOUR_GREEN;
-            Leds::fsm.trigger(Leds::Trigger::SOLID);
+            // Serial.printf("(LedsTask) xBluetoothQueue rxd: %s\n", packet->status ? "CONNECTED" : "DISCONNECTED");
+
+            if (packet->hr <= HZ1_TOP)
+            {
+                Leds::fsm.trigger(Leds::TR_ZONE_1);
+            }
+            else if (packet->hr <= HZ2_TOP)
+            {
+                Leds::fsm.trigger(Leds::TR_ZONE_2);
+            }
+            else if (packet->hr <= HZ3_TOP)
+            {
+                Leds::fsm.trigger(Leds::TR_ZONE_3);
+            }
+            else if (packet->hr <= HZ4_TOP)
+            {
+                Leds::fsm.trigger(Leds::TR_ZONE_4);
+            }
+            else
+            {
+                Leds::fsm.trigger(Leds::TR_ZONE_5);
+            }
+
             break;
         case Bluetooth::DISCONNECTED:
             Serial.printf("(LedsTask) xBluetoothQueue rxd: %s\n", packet->status ? "CONNECTED" : "DISCONNECTED");
             Leds::ledColour = Leds::COLOUR_BLUE;
-            Leds::fsm.trigger(Leds::Trigger::START_FLASHING);
-            break;
-        case Bluetooth::BELOW_ZONE:
-            Leds::ledColour = Leds::COLOUR_HEADLIGHT_WHITE;
-            Leds::fsm.trigger(Leds::Trigger::SLOW_FLASHES);
-            break;
-        case Bluetooth::IN_ZONE:
-            Leds::ledColour = Leds::COLOUR_GREEN;
-            Leds::fsm.trigger(Leds::Trigger::SLOW_FLASHES);
-            break;
-        case Bluetooth::ABOVE_ZONE:
-            Leds::ledColour = Leds::COLOUR_RED;
-            Leds::fsm.trigger(Leds::Trigger::START_FLASHING);
+            Leds::fsm.trigger(Leds::Trigger::TR_DISCONNECTED);
             break;
         }
     }

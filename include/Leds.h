@@ -11,7 +11,7 @@ namespace Leds
 	Adafruit_NeoPixel hudLed = Adafruit_NeoPixel(PIXEL_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
 
 	uint32_t COLOUR_OFF = hudLed.Color(0, 0, 0);
-	uint32_t COLOUR_GREY = hudLed.Color(10, 10, 10);
+	uint32_t COLOUR_GREY = hudLed.Color(0, 0, 0, 100);
 	uint32_t COLOUR_WHITE = hudLed.Color(100, 100, 100);
 	uint32_t COLOUR_HEADLIGHT_WHITE = hudLed.Color(0, 0, 30, 255);
 	uint32_t COLOUR_YELLOW = hudLed.Color(100, 255, 0);
@@ -88,12 +88,24 @@ namespace Leds
 		START_FLASHING,
 		SLOW_FLASHES,
 		SOLID,
+		TR_DISCONNECTED,
+		TR_ZONE_1,
+		TR_ZONE_2,
+		TR_ZONE_3,
+		TR_ZONE_4,
+		TR_ZONE_5,
 	};
 
 	enum StateName
 	{
-		STATE_FLASHING,
-		STATE_SOLID,
+		// STATE_FLASHING,
+		// STATE_SOLID,
+		STATE_DISCONNECTED,
+		STATE_ZONE1,
+		STATE_ZONE2,
+		STATE_ZONE3,
+		STATE_ZONE4,
+		STATE_ZONE5,
 	};
 
 #define FLASH_5050_MS 500
@@ -107,22 +119,15 @@ namespace Leds
 	uint8_t flashCounter = 0;
 	uint16_t flashOnMs = FLASH_SHORT_MS, flashOffMs = FLASH_LONG_MS;
 
-	void on_enter_flashing()
+	struct CurrentZone
 	{
-		flashingState = false;
-		setLed(ledColour);
-	}
+		uint8_t number;
+		uint32_t colour;
+	} thisZone;
 
-	void on_enter_solid()
+	void flashLed(uint16_t period)
 	{
-		setLed(ledColour);
-	}
-
-	void on_state_flashing()
-	{
-		uint16_t flashingMarkMs = flashingState ? flashOnMs : flashOffMs;
-
-		if (sinceFlashed > flashingMarkMs)
+		if (sinceFlashed > period)
 		{
 			flashingState = !flashingState;
 			setLed(flashingState ? ledColour : COLOUR_OFF);
@@ -130,23 +135,75 @@ namespace Leds
 		}
 	}
 
+	void on_enter_disconnected()
+	{
+		Serial.printf("on_enter_disconnected()\n");
+		ledColour = COLOUR_BLUE;
+		setLed(ledColour);
+	}
+
+	void on_in_disconnected()
+	{
+		flashLed(500);
+	}
+
+	void on_enter_zone()
+	{
+		Serial.printf("on_enter_zone() zone %d\n", thisZone.number);
+	}
+
+	void on_in_zone()
+	{
+		flashLed(500);
+	}
+
 	State zone[] = {
-		State("stateFlashing", &on_enter_flashing, &on_state_flashing),
-		State("stateSolid", &on_enter_solid),
+		State("stateDisconnected", &on_enter_disconnected, &on_in_disconnected),
+		State("stateZone1", &on_enter_zone, &on_in_zone),
+		State("stateZone2", &on_enter_zone, &on_in_zone),
+		State("stateZone3", &on_enter_zone, &on_in_zone),
+		State("stateZone4", &on_enter_zone, &on_in_zone),
+		State("stateZone5", &on_enter_zone, &on_in_zone),
 	};
+
+	void onInZone1()
+	{
+		sinceEntered = 0;
+		thisZone.number = 1;
+		ledColour = COLOUR_GREY;
+	}
+
+	void onInZone2()
+	{
+		sinceEntered = 0;
+		thisZone.number = 2;
+		ledColour = COLOUR_HEADLIGHT_WHITE;
+	}
+
+	void onInZone3()
+	{
+		sinceEntered = 0;
+		thisZone.number = 3;
+		ledColour = COLOUR_YELLOW;
+	}
+
+	void onInZone4()
+	{
+		sinceEntered = 0;
+		thisZone.number = 4;
+		ledColour = COLOUR_RED;
+	}
+
+	void onInZone5()
+	{
+		sinceEntered = 0;
+		thisZone.number = 5;
+		ledColour = COLOUR_DARK_RED;
+	}
 
 	void onRun()
 	{
 		sinceEntered = 0;
-		flashOnMs = FLASH_5050_MS;
-		flashOffMs = FLASH_5050_MS;
-	}
-
-	void runSlowFlashes()
-	{
-		sinceEntered = 0;
-		flashOnMs = FLASH_SHORT_MS;
-		flashOffMs = FLASH_LONG_MS;
 	}
 
 	bool onGuard()
@@ -155,11 +212,31 @@ namespace Leds
 	}
 
 	Transition transitions[] = {
-		Transition(&zone[STATE_FLASHING], &zone[STATE_SOLID], Trigger::SOLID, &onRun, "", &onGuard),
-		Transition(&zone[STATE_SOLID], &zone[STATE_FLASHING], Trigger::START_FLASHING, &onRun, "", &onGuard),
-		Transition(&zone[STATE_SOLID], &zone[STATE_FLASHING], Trigger::SLOW_FLASHES, &runSlowFlashes, "", &onGuard),
+		// going UP
+		Transition(&zone[STATE_ZONE1], &zone[STATE_ZONE2], Trigger::TR_ZONE_2, &onInZone2),
+		Transition(&zone[STATE_ZONE2], &zone[STATE_ZONE3], Trigger::TR_ZONE_3, &onInZone3),
+		Transition(&zone[STATE_ZONE3], &zone[STATE_ZONE4], Trigger::TR_ZONE_4, &onInZone4),
+		Transition(&zone[STATE_ZONE4], &zone[STATE_ZONE5], Trigger::TR_ZONE_5, &onInZone5),
 
-		Transition(&zone[STATE_SOLID], &zone[STATE_SOLID], Trigger::SOLID, &onRun, "", &onGuard),
+		// going DOWN
+		Transition(&zone[STATE_ZONE5], &zone[STATE_ZONE4], Trigger::TR_ZONE_4, &onInZone4),
+		Transition(&zone[STATE_ZONE4], &zone[STATE_ZONE3], Trigger::TR_ZONE_3, &onInZone3),
+		Transition(&zone[STATE_ZONE3], &zone[STATE_ZONE2], Trigger::TR_ZONE_2, &onInZone2),
+		Transition(&zone[STATE_ZONE2], &zone[STATE_ZONE1], Trigger::TR_ZONE_1, &onInZone1),
+
+		// from disconnected
+		Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ZONE1], Trigger::TR_ZONE_1, &onInZone1),
+		Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ZONE2], Trigger::TR_ZONE_2, &onInZone1),
+		Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ZONE3], Trigger::TR_ZONE_3, &onInZone1),
+		Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ZONE4], Trigger::TR_ZONE_4, &onInZone1),
+		Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ZONE5], Trigger::TR_ZONE_5, &onInZone1),
+
+		// to disconnected
+		Transition(&zone[STATE_ZONE1], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED),
+		Transition(&zone[STATE_ZONE2], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED),
+		Transition(&zone[STATE_ZONE3], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED),
+		Transition(&zone[STATE_ZONE4], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED),
+		Transition(&zone[STATE_ZONE5], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED),
 	};
 
 	void SetupFsm()
@@ -171,6 +248,6 @@ namespace Leds
 		flashOffMs = FLASH_5050_MS;
 		flashOnMs = FLASH_5050_MS;
 		flashCounter = -1; // infinite
-		fsm.setInitialState(&zone[STATE_FLASHING]);
+		fsm.setInitialState(&zone[STATE_DISCONNECTED]);
 	}
 }
