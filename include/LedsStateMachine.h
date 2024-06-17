@@ -14,6 +14,7 @@ namespace Leds
         TR_IN_ZONE,
         TR_ABOVE_ZONE,
         TR_CYCLE_BRIGHTNESS,
+        TR_ZONE_CHANGE,
     };
 
     enum StateName
@@ -23,6 +24,8 @@ namespace Leds
         STATE_IN_ZONE,
         STATE_ABOVE_ZONE,
         STATE_CYCLE_BRIGHTNESS,
+        STATE_ZONE_CHANGE,
+        STATE_IDLE,
     };
 
 #define FLASH_5050_MS 500
@@ -35,6 +38,12 @@ namespace Leds
     elapsedMillis sinceFlashWindow = 0;
     uint32_t ledColour = Leds::COLOUR_OFF;
     uint8_t flashCounter = 0;
+
+    enum SelectedZone
+    {
+        ZONE_TWO,
+        ZONE_THREE,
+    } selectedZone;
 
     struct CurrentZone
     {
@@ -101,7 +110,7 @@ namespace Leds
 
     void belowZone_OnEnter()
     {
-        Serial.printf("belowZone_Onnter_below_zone() \n");
+        Serial.printf("belowZone_OnEnter() \n");
         ledColour = COLOUR_HEADLIGHT_WHITE;
         setZoneFlashes(2, TWO_SECONDS);
         Leds::setLed(ledColour);
@@ -144,17 +153,25 @@ namespace Leds
         setLed(ledColour);
     }
 
-    void cycleBrightness_OnState()
+    void zoneChange_OnEnter()
     {
+        Serial.printf("zoneChange_OnEnter() \n");
+        uint32_t col = selectedZone == SelectedZone::ZONE_TWO
+                           ? COLOUR_GREEN
+                           : COLOUR_RED;
+        setLed(col);
     }
+
+    void idle_OnEnter() {}
 
     State zone[] = {
         State("stateDisconnected", &disconnected_OnEnter, &disconnected_OnState),
         State("stateBelowZone", &belowZone_OnEnter, &belowZone_OnState),
         State("stateInZone", &inZone_OnEnter, &inZone_OnState),
         State("stateAboveZone", &aboveZone_OnEnter, &aboveZone_OnState),
-        State("stateCycleBrightness", &cycleBrightness_OnEnter, &cycleBrightness_OnState),
-    };
+        State("stateCycleBrightness", &cycleBrightness_OnEnter),
+        State("stateZoneChange", &zoneChange_OnEnter),
+        State("stateIdle", &idle_OnEnter)};
 
     void onRun()
     {
@@ -164,34 +181,44 @@ namespace Leds
     }
 
     TimedTransition timedTransitions[] = {
-        // TR_CYCLE_BRIGHTNESS
-        TimedTransition(&zone[STATE_CYCLE_BRIGHTNESS], &zone[STATE_DISCONNECTED], 500),
+        TimedTransition(&zone[STATE_CYCLE_BRIGHTNESS], &zone[STATE_IDLE], 1000),
+        TimedTransition(&zone[STATE_ZONE_CHANGE], &zone[STATE_IDLE], 1000),
     };
 
     Transition transitions[] = {
-        // going UP
+        // TR_IN_ZONE
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
-        Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
-
-        // going DOWN
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
-        Transition(&zone[STATE_IN_ZONE], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
-
-        // from disconnected
-        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
-        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
+        Transition(&zone[STATE_IDLE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
 
-        // to disconnected
+        // TR_ABOVE_ZONE
+        Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
+        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
+        Transition(&zone[STATE_IDLE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
+
+        // TR_BELOW_ZONE
+        Transition(&zone[STATE_IN_ZONE], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
+        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
+        Transition(&zone[STATE_IDLE], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
+
+        // TR_DISCONNECTED
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
+        Transition(&zone[STATE_IDLE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
 
         // -> TR_CYCLE_BRIGHTNESS
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
+
+        // -> TR_ZONE_CHANGE
+        Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
+        Transition(&zone[STATE_IN_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
+
     };
 
     void SetupFsm()

@@ -32,12 +32,12 @@ void setup()
 		/*core*/ 1);
 
 	xTaskCreatePinnedToCore(
-		LedsTask::task1,
+		Leds::task1,
 		"LedsTask",
 		/*stack depth*/ 8000,
 		/*params*/ NULL,
 		/*priority*/ 1,
-		&LedsTask::taskHandle,
+		&Leds::taskHandle,
 		/*core*/ 1);
 
 	xTaskCreatePinnedToCore(

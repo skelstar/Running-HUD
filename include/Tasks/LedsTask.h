@@ -2,10 +2,11 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include "Types.h"
 #include "Leds.h"
 #include "LedsStateMachine.h"
 
-namespace LedsTask
+namespace Leds
 {
     TaskHandle_t taskHandle = nullptr;
     const char *taskName = "LedsTask";
@@ -26,6 +27,8 @@ namespace LedsTask
         Leds::setBrightness(Leds::BRIGHT_LOW);
 
         Leds::SetupFsm();
+
+        selectedZone = SelectedZone::ZONE_TWO;
 
         while (1)
         {
@@ -68,6 +71,12 @@ namespace LedsTask
                 Leds::cycleBrightnessUp();
                 Leds::fsm.trigger(Leds::TR_CYCLE_BRIGHTNESS);
             }
+            else if (packet->event == ButtonEvent::LONGCLICK)
+            {
+                Serial.printf("(LedsTask) xButtonQueue rxd: ACC_BTN event: LONG_CLICK\n");
+                selectedZone = selectedZone == ZONE_TWO ? ZONE_THREE : ZONE_TWO;
+                Leds::fsm.trigger(Leds::TR_ZONE_CHANGE);
+            }
             break;
         case ButtonOption::MAIN_BTN:
             Serial.printf("(LedsTask) xButtonQueue rxd: MAIN_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
@@ -89,11 +98,17 @@ namespace LedsTask
             }
             else if (packet->hr <= HZ2_TOP)
             {
-                Leds::fsm.trigger(Leds::TR_IN_ZONE);
+                uint8_t event = selectedZone == ZONE_TWO
+                                    ? Leds::TR_IN_ZONE
+                                    : Leds::TR_BELOW_ZONE;
+                Leds::fsm.trigger(event);
             }
             else if (packet->hr <= HZ3_TOP)
             {
-                Leds::fsm.trigger(Leds::TR_ABOVE_ZONE);
+                uint8_t event = selectedZone == ZONE_THREE
+                                    ? Leds::TR_IN_ZONE
+                                    : Leds::TR_ABOVE_ZONE;
+                Leds::fsm.trigger(event);
             }
             else if (packet->hr <= HZ4_TOP)
             {
