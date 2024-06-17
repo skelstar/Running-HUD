@@ -3,6 +3,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "Leds.h"
+#include "LedsStateMachine.h"
 
 namespace LedsTask
 {
@@ -62,9 +63,11 @@ namespace LedsTask
         switch (packet->button)
         {
         case ButtonOption::ACC_BTN:
-            Serial.printf("(LedsTask) xButtonQueue rxd: ACC_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
             if (packet->event == ButtonEvent::CLICK)
+            {
                 Leds::cycleBrightnessUp();
+                Leds::fsm.trigger(Leds::TR_CYCLE_BRIGHTNESS);
+            }
             break;
         case ButtonOption::MAIN_BTN:
             Serial.printf("(LedsTask) xButtonQueue rxd: MAIN_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
@@ -80,29 +83,26 @@ namespace LedsTask
         switch (packet->status)
         {
         case Bluetooth::CONNECTED:
-            // Serial.printf("(LedsTask) xBluetoothQueue rxd: %s\n", packet->status ? "CONNECTED" : "DISCONNECTED");
-
             if (packet->hr <= HZ1_TOP)
             {
-                Leds::fsm.trigger(Leds::TR_ZONE_1);
+                Leds::fsm.trigger(Leds::TR_BELOW_ZONE);
             }
             else if (packet->hr <= HZ2_TOP)
             {
-                Leds::fsm.trigger(Leds::TR_ZONE_2);
+                Leds::fsm.trigger(Leds::TR_IN_ZONE);
             }
             else if (packet->hr <= HZ3_TOP)
             {
-                Leds::fsm.trigger(Leds::TR_ZONE_3);
+                Leds::fsm.trigger(Leds::TR_ABOVE_ZONE);
             }
             else if (packet->hr <= HZ4_TOP)
             {
-                Leds::fsm.trigger(Leds::TR_ZONE_4);
+                Leds::fsm.trigger(Leds::TR_ABOVE_ZONE);
             }
             else
             {
-                Leds::fsm.trigger(Leds::TR_ZONE_5);
+                Leds::fsm.trigger(Leds::TR_ABOVE_ZONE);
             }
-
             break;
         case Bluetooth::DISCONNECTED:
             Serial.printf("(LedsTask) xBluetoothQueue rxd: %s\n", packet->status ? "CONNECTED" : "DISCONNECTED");
