@@ -13,6 +13,7 @@ QueueHandle_t xButtonQueue;
 #include "Tasks/ButtonsTask.h"
 #include "Tasks/RedLedTask.h"
 #include "Tasks/AccelerometerTask.h"
+#include "Tasks/DisplayTask.h"
 
 void setup()
 {
@@ -56,6 +57,8 @@ void setup()
 		/*priority*/ 1,
 		&RedLedTask::taskHandle,
 		/*core*/ 1);
+
+	DisplayTask::createTask();
 
 	// xTaskCreatePinnedToCore(
 	// 	AccelerometerTask::task1,

@@ -4,7 +4,8 @@
 #include <freertos/task.h>
 
 #include "ButtonAcc.h"
-#include "ButtonMain.h"
+// #include "ButtonMain.h"
+#include "ButtonRst.h"
 #include "Types.h"
 
 namespace ButtonsTask
@@ -16,15 +17,17 @@ namespace ButtonsTask
     {
         Serial.println("ButtonsTask: Started");
 
-        ButtonMain::initialise();
+        // ButtonMain::initialise();
         ButtonAcc::initialise();
 
         while (1)
         {
-            ButtonMain::button.loop();
+            // ButtonMain::button.loop();
             ButtonAcc::button.loop();
 
-            vTaskDelay(TICKS_100ms);
+            ButtonRst::loop();
+
+            vTaskDelay(TICKS_5ms);
         }
     }
 }

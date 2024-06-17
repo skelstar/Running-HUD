@@ -63,7 +63,8 @@ namespace LedsTask
         {
         case ButtonOption::ACC_BTN:
             Serial.printf("(LedsTask) xButtonQueue rxd: ACC_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
-            Leds::cycleBrightness();
+            if (packet->event == ButtonEvent::CLICK)
+                Leds::cycleBrightnessUp();
             break;
         case ButtonOption::MAIN_BTN:
             Serial.printf("(LedsTask) xButtonQueue rxd: MAIN_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");

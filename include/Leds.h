@@ -74,9 +74,11 @@ namespace Leds
 		Serial.printf("Brightness now: %d\n", hudLed.getBrightness());
 	}
 
-	void cycleBrightness()
+	void cycleBrightnessUp()
 	{
-		_brightness = _brightness != BRIGHT_LOW ? _brightness - 1 : BRIGHT_HIGHER;
+		_brightness++;
+		if (_brightness > BRIGHT_HIGHER)
+			_brightness = BRIGHT_LOW;
 		setBrightness(_brightness);
 	}
 

@@ -22,7 +22,7 @@ namespace ButtonAcc
 
 		packet.id++;
 		packet.button = ButtonOption::ACC_BTN;
-		packet.event = CLICK;
+		packet.event = ButtonEvent::CLICK;
 
 		sendPacket(&packet);
 	}
@@ -33,7 +33,18 @@ namespace ButtonAcc
 
 		packet.id++;
 		packet.button = ButtonOption::ACC_BTN;
-		packet.event = LONGCLICK;
+		packet.event = ButtonEvent::LONGCLICK;
+
+		sendPacket(&packet);
+	}
+
+	void doubleTapHandler_cb(Button2 &btn)
+	{
+		Serial.printf("Acc Button double click\n");
+
+		packet.id++;
+		packet.button = ButtonOption::ACC_BTN;
+		packet.event = ButtonEvent::DOUBLE_TAP;
 
 		sendPacket(&packet);
 	}
@@ -42,9 +53,11 @@ namespace ButtonAcc
 	{
 		button.begin(ACC_BUTTON_PIN);
 		button.setLongClickTime(LONGCLICK_MS);
+		button.setDoubleClickTime(500); // default: BTN_DOUBLECLICK_MS = 300
 
 		// handlers
 		button.setClickHandler(&clickHandler);
 		button.setLongClickDetectedHandler(&longClickDetectedHandler);
+		button.setDoubleClickHandler(&doubleTapHandler_cb);
 	}
 }

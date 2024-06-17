@@ -27,6 +27,7 @@ enum ButtonOption
 {
     ACC_BTN,
     MAIN_BTN,
+    RST_BTN,
     ACCEL,
 };
 
