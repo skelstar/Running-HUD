@@ -16,13 +16,14 @@ namespace DisplayTask
     void handleButtonPacket(ButtonPacket *packet);
 
     unsigned long buttonPacketId = -1;
+    bool displayOn = false;
 
     void task1(void *pvParameters)
     {
         Serial.printf("%s: Started\n", taskName);
 
         M5.begin();
-        M5.Lcd.fillScreen(BLACK);
+        M5.Axp.SetLDO2(false);
 
         while (1)
         {
@@ -46,10 +47,30 @@ namespace DisplayTask
         switch (packet->button)
         {
         case ButtonOption::ACC_BTN:
-            Serial.printf("(DisplayTask) xButtonQueue rxd: ACC_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
-            if (packet->event == ButtonEvent::DOUBLE_TAP)
+            // Serial.printf("(DisplayTask) xButtonQueue rxd: ACC_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
+            switch (packet->event)
             {
-                M5.Lcd.fillScreen(BLACK);
+            case ButtonEvent::CLICK:
+                break;
+            case ButtonEvent::LONGCLICK:
+                break;
+            case ButtonEvent::DOUBLE_TAP:
+                break;
+            }
+            break;
+        case ButtonOption::MAIN_BTN:
+            // Serial.printf("(DisplayTask) xButtonQueue rxd: MAIN_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
+            switch (packet->event)
+            {
+            case ButtonEvent::CLICK:
+                break;
+            case ButtonEvent::LONGCLICK:
+                displayOn = !displayOn;
+                M5.Axp.SetLDO2(displayOn);
+                M5.Lcd.fillScreen(WHITE);
+                break;
+            case ButtonEvent::DOUBLE_TAP:
+                break;
             }
             break;
         case ButtonOption::ACCEL:
@@ -58,12 +79,12 @@ namespace DisplayTask
         }
     }
 
-    void createTask()
+    void createTask(int stackDepth)
     {
         xTaskCreatePinnedToCore(
             task1,
             taskName,
-            /*stack depth*/ 2048,
+            /*stack depth*/ stackDepth,
             /*params*/ NULL,
             /*priority*/ 1,
             &taskHandle,

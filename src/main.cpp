@@ -22,57 +22,17 @@ void setup()
 	xBluetoothQueue = xQueueCreate(1, sizeof(Bluetooth::Packet *));
 	xButtonQueue = xQueueCreate(1, sizeof(ButtonPacket *));
 
-	xTaskCreatePinnedToCore(
-		BluetoothTask::task1,
-		BluetoothTask::taskName,
-		/*stack depth*/ 4096,
-		/*params*/ NULL,
-		/*priority*/ 1,
-		&BluetoothTask::taskHandle,
-		/*core*/ 1);
-
-	xTaskCreatePinnedToCore(
-		Leds::task1,
-		"LedsTask",
-		/*stack depth*/ 8000,
-		/*params*/ NULL,
-		/*priority*/ 1,
-		&Leds::taskHandle,
-		/*core*/ 1);
-
-	xTaskCreatePinnedToCore(
-		ButtonsTask::task1,
-		ButtonsTask::taskName,
-		/*stack depth*/ 2048,
-		/*params*/ NULL,
-		/*priority*/ 1,
-		&ButtonsTask::taskHandle,
-		/*core*/ 1);
-
-	xTaskCreatePinnedToCore(
-		RedLedTask::task1,
-		RedLedTask::taskName,
-		/*stack depth*/ 2048,
-		/*params*/ NULL,
-		/*priority*/ 1,
-		&RedLedTask::taskHandle,
-		/*core*/ 1);
-
-	DisplayTask::createTask();
-
-	// xTaskCreatePinnedToCore(
-	// 	AccelerometerTask::task1,
-	// 	AccelerometerTask::taskName,
-	// 	/*stack depth*/ 2048,
-	// 	/*params*/ NULL,
-	// 	/*priority*/ 1,
-	// 	&AccelerometerTask::taskHandle,
-	// 	/*core*/ 1);
+	BluetoothTask::createTask(4096);
+	Leds::createTask(8000);
+	ButtonsTask::createTask(2048);
+	RedLedTask::createTask(2048);
+	DisplayTask::createTask(2048);
+	// AccelerometerTask::createTask(2048);
 }
 
 int loopNum = 0;
 
 void loop()
 {
-	vTaskDelay(10);
+	vTaskDelay(TICKS_10ms);
 }

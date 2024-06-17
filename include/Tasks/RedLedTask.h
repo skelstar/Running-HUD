@@ -54,4 +54,16 @@ namespace RedLedTask
         shouldFlashLed = packet->status == Bluetooth::DISCONNECTED ||
                          (packet->status == Bluetooth::CONNECTED && packet->hr < HZ1_TOP);
     }
+
+    void createTask(int stackDepth)
+    {
+        xTaskCreatePinnedToCore(
+            task1,
+            taskName,
+            /*stack depth*/ stackDepth,
+            /*params*/ NULL,
+            /*priority*/ 1,
+            &taskHandle,
+            /*core*/ 1);
+    }
 }

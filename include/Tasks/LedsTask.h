@@ -126,4 +126,16 @@ namespace Leds
             break;
         }
     }
+
+    void createTask(int stackDepth)
+    {
+        xTaskCreatePinnedToCore(
+            task1,
+            taskName,
+            /*stack depth*/ stackDepth,
+            /*params*/ NULL,
+            /*priority*/ 1,
+            &taskHandle,
+            /*core*/ 1);
+    }
 }
