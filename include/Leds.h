@@ -30,7 +30,8 @@ namespace Leds
 
 	enum FlashSchema
 	{
-		FLASHES_IN_SECOND,
+		FLASHES_EACH_SECOND,
+		FLASHES_ONE_OFF,
 		FIFTY_FIFTY,
 	};
 

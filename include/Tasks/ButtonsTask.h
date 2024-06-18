@@ -24,7 +24,6 @@ namespace ButtonsTask
         {
             ButtonMain::button.loop();
             ButtonAcc::button.loop();
-
             ButtonRst::loop();
 
             vTaskDelay(TICKS_5ms);

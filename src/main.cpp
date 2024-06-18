@@ -14,6 +14,7 @@ QueueHandle_t xButtonQueue;
 #include "Tasks/RedLedTask.h"
 #include "Tasks/AccelerometerTask.h"
 #include "Tasks/DisplayTask.h"
+#include "Tasks/ClipDetectTask.h"
 
 void setup()
 {
@@ -27,10 +28,9 @@ void setup()
 	ButtonsTask::createTask(2048);
 	RedLedTask::createTask(2048);
 	DisplayTask::createTask(2048);
+	// ClipDetectTask::createTask(1024);
 	// AccelerometerTask::createTask(2048);
 }
-
-int loopNum = 0;
 
 void loop()
 {

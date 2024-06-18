@@ -15,6 +15,7 @@ namespace Leds
         TR_ABOVE_ZONE,
         TR_CYCLE_BRIGHTNESS,
         TR_ZONE_CHANGE,
+        TR_POWER_DOWN,
     };
 
     enum StateName
@@ -26,6 +27,7 @@ namespace Leds
         STATE_CYCLE_BRIGHTNESS,
         STATE_ZONE_CHANGE,
         STATE_IDLE,
+        STATE_POWER_DOWN,
     };
 
 #define FLASH_5050_MS 500
@@ -61,9 +63,9 @@ namespace Leds
         sinceFlashed = 0;
     }
 
-    void setZoneFlashes(uint8_t numFlashes, uint16_t period)
+    void setZoneFlashes(uint8_t numFlashes, uint16_t period, FlashSchema schema = FLASHES_EACH_SECOND)
     {
-        thisZone.schema = FLASHES_IN_SECOND;
+        thisZone.schema = schema;
         thisZone.numFlashes = numFlashes;
         thisZone.flashWindow = period;
     }
@@ -72,15 +74,17 @@ namespace Leds
     {
         switch (schema)
         {
-        case FlashSchema::FLASHES_IN_SECOND:
+        case FlashSchema::FLASHES_EACH_SECOND:
+        case FlashSchema::FLASHES_ONE_OFF:
             if (sinceFlashed > 50 && flashCounter < thisZone.numFlashes)
             {
                 flashLed();
                 if (flashingState == 0)
                     flashCounter++;
             }
-            // time to start flashes again?
-            else if (sinceFlashWindow > thisZone.flashWindow)
+            // time to start flashes again (if flashes each second)?
+            else if (sinceFlashWindow > thisZone.flashWindow &&
+                     schema == FLASHES_EACH_SECOND)
             {
                 sinceFlashWindow = 0;
                 flashCounter = 0;
@@ -95,83 +99,78 @@ namespace Leds
         }
     }
 
-    void disconnected_OnEnter()
+    void onEnter_disconnected()
     {
-        Serial.printf("disconnected_OnEnter()\n");
+        Serial.printf("onEnter_disconnected()\n");
         ledColour = COLOUR_BLUE;
         setLed(ledColour);
         thisZone.schema = FlashSchema::FIFTY_FIFTY;
     }
 
-    void disconnected_OnState()
+    void handleSchema_OnState()
     {
         handleSchema(thisZone.schema);
     }
 
-    void belowZone_OnEnter()
+    void onEnter_belowZone()
     {
-        Serial.printf("belowZone_OnEnter() \n");
-        ledColour = COLOUR_HEADLIGHT_WHITE;
+        Serial.printf("onEnter_belowZone() \n");
+        ledColour = COLOUR_WHITE;
         setZoneFlashes(2, TWO_SECONDS);
         Leds::setLed(ledColour);
     }
 
-    void belowZone_OnState()
+    void onEnter_inZone()
     {
-        handleSchema(thisZone.schema);
-    }
-
-    void inZone_OnEnter()
-    {
-        Serial.printf("inZone_OnEnter() \n");
+        Serial.printf("onEnter_inZone() \n");
         ledColour = COLOUR_GREEN;
         setZoneFlashes(1, THREE_SECONDS);
         Leds::setLed(ledColour);
     }
 
-    void inZone_OnState()
+    void onEnter_aboveZone()
     {
-        handleSchema(thisZone.schema);
-    }
-
-    void aboveZone_OnEnter()
-    {
-        Serial.printf("aboveZone_OnEnter() \n");
+        Serial.printf("onEnter_aboveZone() \n");
         ledColour = COLOUR_RED;
         setZoneFlashes(3, TWO_SECONDS);
         Leds::setLed(ledColour);
     }
 
-    void aboveZone_OnState()
+    void onEnter_cycleBrightness()
     {
-        handleSchema(thisZone.schema);
-    }
-
-    void cycleBrightness_OnEnter()
-    {
-        Serial.printf("cycleBrightness_OnEnter() \n");
+        Serial.printf("onEnter_cycleBrightness() \n");
         setLed(ledColour);
     }
 
-    void zoneChange_OnEnter()
+    void onEnter_zoneChange()
     {
-        Serial.printf("zoneChange_OnEnter() \n");
+        Serial.printf("onEnter_zoneChange() \n");
         uint32_t col = selectedZone == SelectedZone::ZONE_TWO
                            ? COLOUR_GREEN
                            : COLOUR_RED;
         setLed(col);
     }
 
-    void idle_OnEnter() {}
+    void onEnter_idle() {}
+
+    void onEnter_powerDown()
+    {
+        Serial.printf("onEnter_powerDown() \n");
+        ledColour = COLOUR_RED;
+        setZoneFlashes(8, TWO_SECONDS, FLASHES_ONE_OFF);
+        Leds::setBrightness(BRIGHT_HIGH);
+        Leds::setLed(ledColour);
+    }
 
     State zone[] = {
-        State("stateDisconnected", &disconnected_OnEnter, &disconnected_OnState),
-        State("stateBelowZone", &belowZone_OnEnter, &belowZone_OnState),
-        State("stateInZone", &inZone_OnEnter, &inZone_OnState),
-        State("stateAboveZone", &aboveZone_OnEnter, &aboveZone_OnState),
-        State("stateCycleBrightness", &cycleBrightness_OnEnter),
-        State("stateZoneChange", &zoneChange_OnEnter),
-        State("stateIdle", &idle_OnEnter)};
+        State("stateDisconnected", &onEnter_disconnected, &handleSchema_OnState),
+        State("stateBelowZone", &onEnter_belowZone, &handleSchema_OnState),
+        State("stateInZone", &onEnter_inZone, &handleSchema_OnState),
+        State("stateAboveZone", &onEnter_aboveZone, &handleSchema_OnState),
+        State("stateCycleBrightness", &onEnter_cycleBrightness),
+        State("stateZoneChange", &onEnter_zoneChange),
+        State("stateIdle", &onEnter_idle),
+        State("statePowerDown", &onEnter_powerDown, &handleSchema_OnState)};
 
     void onRun()
     {
@@ -181,7 +180,7 @@ namespace Leds
     }
 
     TimedTransition timedTransitions[] = {
-        TimedTransition(&zone[STATE_CYCLE_BRIGHTNESS], &zone[STATE_IDLE], 1000),
+        TimedTransition(&zone[STATE_CYCLE_BRIGHTNESS], &zone[STATE_IDLE], 500),
         TimedTransition(&zone[STATE_ZONE_CHANGE], &zone[STATE_IDLE], 1000),
     };
 
@@ -219,6 +218,11 @@ namespace Leds
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
 
+        // TR_POWER_DOWN
+        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_POWER_DOWN], Trigger::TR_POWER_DOWN, &onRun),
+        Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWER_DOWN, &onRun),
+        Transition(&zone[STATE_IN_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWER_DOWN, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWER_DOWN, &onRun),
     };
 
     void SetupFsm()

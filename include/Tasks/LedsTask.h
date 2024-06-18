@@ -65,26 +65,43 @@ namespace Leds
     {
         switch (packet->button)
         {
-        case ButtonOption::ACC_BTN:
-            if (packet->event == ButtonEvent::CLICK)
+        case ButtonOption::MAIN_BTN:
+            switch (packet->event)
             {
+            case ButtonEvent::CLICK:
+                // Serial.printf("LedTask Main Btn click\n");
                 Leds::cycleBrightnessUp();
                 Leds::fsm.trigger(Leds::TR_CYCLE_BRIGHTNESS);
-            }
-            else if (packet->event == ButtonEvent::LONGCLICK)
-            {
-                Serial.printf("(LedsTask) xButtonQueue rxd: ACC_BTN event: LONG_CLICK\n");
+                break;
+            case ButtonEvent::LONGCLICK:
+                // Serial.printf("(LedsTask) xButtonQueue rxd: ACC_BTN event: LONG_CLICK\n");
                 selectedZone = selectedZone == ZONE_TWO ? ZONE_THREE : ZONE_TWO;
                 Leds::fsm.trigger(Leds::TR_ZONE_CHANGE);
+                break;
             }
             break;
-        case ButtonOption::MAIN_BTN:
-            Serial.printf("(LedsTask) xButtonQueue rxd: MAIN_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
-            break;
-        case ButtonOption::ACCEL:
-            Serial.printf("(LedsTask) xButtonQueue rxd: ACCEL event: %s\n", packet->event == DOUBLE_TAP ? "DOUBLE_TAP" : "OTHER EVENT");
+        case ButtonOption::RST_BTN:
+            if (packet->event == ButtonEvent::LONGCLICK)
+            {
+                Leds::fsm.trigger(Leds::TR_POWER_DOWN);
+            }
             break;
         }
+    }
+
+    uint8_t getEventForZone(uint8_t zone, uint8_t selectedZone)
+    {
+        if (zone == HZ2_TOP)
+            return selectedZone == ZONE_TWO
+                       ? Leds::TR_IN_ZONE
+                       : Leds::TR_BELOW_ZONE;
+        else if (zone == HZ3_TOP)
+            return selectedZone == ZONE_THREE
+                       ? Leds::TR_IN_ZONE
+                       : Leds::TR_ABOVE_ZONE;
+        else
+            Serial.printf("Unhandled 'zone' value: %d \n", zone);
+        return Leds::TR_ABOVE_ZONE;
     }
 
     void handlePacket(Bluetooth::Packet *packet)
@@ -98,16 +115,12 @@ namespace Leds
             }
             else if (packet->hr <= HZ2_TOP)
             {
-                uint8_t event = selectedZone == ZONE_TWO
-                                    ? Leds::TR_IN_ZONE
-                                    : Leds::TR_BELOW_ZONE;
+                uint8_t event = getEventForZone(HZ2_TOP, selectedZone);
                 Leds::fsm.trigger(event);
             }
             else if (packet->hr <= HZ3_TOP)
             {
-                uint8_t event = selectedZone == ZONE_THREE
-                                    ? Leds::TR_IN_ZONE
-                                    : Leds::TR_ABOVE_ZONE;
+                uint8_t event = getEventForZone(HZ3_TOP, selectedZone);
                 Leds::fsm.trigger(event);
             }
             else if (packet->hr <= HZ4_TOP)

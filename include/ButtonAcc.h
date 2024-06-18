@@ -18,8 +18,6 @@ namespace ButtonAcc
 
 	void clickHandler(Button2 &btn)
 	{
-		Serial.printf("Acc Button clicked\n");
-
 		packet.id++;
 		packet.button = ButtonOption::ACC_BTN;
 		packet.event = ButtonEvent::CLICK;
@@ -29,8 +27,6 @@ namespace ButtonAcc
 
 	void longClickDetectedHandler(Button2 &btn)
 	{
-		Serial.printf("Acc Button long click\n");
-
 		packet.id++;
 		packet.button = ButtonOption::ACC_BTN;
 		packet.event = ButtonEvent::LONGCLICK;
@@ -40,8 +36,6 @@ namespace ButtonAcc
 
 	void doubleTapHandler_cb(Button2 &btn)
 	{
-		Serial.printf("Acc Button double click\n");
-
 		packet.id++;
 		packet.button = ButtonOption::ACC_BTN;
 		packet.event = ButtonEvent::DOUBLE_TAP;

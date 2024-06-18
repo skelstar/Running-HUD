@@ -29,6 +29,7 @@ enum ButtonOption
     MAIN_BTN,
     RST_BTN,
     ACCEL,
+    CLIP_DETECT,
 };
 
 enum ButtonEvent
@@ -36,4 +37,6 @@ enum ButtonEvent
     CLICK,
     LONGCLICK,
     DOUBLE_TAP,
+    DETECTED,
+    NOT_DETECTED,
 };

@@ -14,6 +14,8 @@ namespace DisplayTask
 
     // prototypes
     void handleButtonPacket(ButtonPacket *packet);
+    void initScreen();
+    void showStartupScreen();
 
     unsigned long buttonPacketId = -1;
     bool displayOn = false;
@@ -23,7 +25,12 @@ namespace DisplayTask
         Serial.printf("%s: Started\n", taskName);
 
         M5.begin();
-        M5.Axp.SetLDO2(false);
+        // M5.Axp.SetLDO2(false);
+        initScreen();
+
+        showStartupScreen();
+
+        M5.Axp.SetLDO2(false); // turn off
 
         while (1)
         {
@@ -46,37 +53,39 @@ namespace DisplayTask
     {
         switch (packet->button)
         {
-        case ButtonOption::ACC_BTN:
-            // Serial.printf("(DisplayTask) xButtonQueue rxd: ACC_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
-            switch (packet->event)
-            {
-            case ButtonEvent::CLICK:
-                break;
-            case ButtonEvent::LONGCLICK:
-                break;
-            case ButtonEvent::DOUBLE_TAP:
-                break;
-            }
-            break;
         case ButtonOption::MAIN_BTN:
-            // Serial.printf("(DisplayTask) xButtonQueue rxd: MAIN_BTN event: %s\n", packet->event == CLICK ? "CLICK" : "OTHER EVENT");
             switch (packet->event)
             {
             case ButtonEvent::CLICK:
                 break;
             case ButtonEvent::LONGCLICK:
-                displayOn = !displayOn;
-                M5.Axp.SetLDO2(displayOn);
-                M5.Lcd.fillScreen(WHITE);
                 break;
             case ButtonEvent::DOUBLE_TAP:
                 break;
             }
-            break;
-        case ButtonOption::ACCEL:
-            Serial.printf("(DisplayTask) xButtonQueue rxd: ACCEL event: %s\n", packet->event == DOUBLE_TAP ? "DOUBLE_TAP" : "OTHER EVENT");
             break;
         }
+    }
+
+    void initScreen()
+    {
+        M5.Lcd.setRotation(3);
+        M5.Lcd.fillScreen(BLACK);
+        vTaskDelay(TICKS_500ms);
+    }
+
+    void showStartupScreen()
+    {
+        M5.Lcd.setCursor(5, 8);
+        M5.Lcd.setTextColor(WHITE);
+        M5.Lcd.setTextSize(2);
+        M5.Lcd.printf("Main C: Bright");
+        M5.Lcd.setCursor(5, 23);
+        M5.Lcd.printf("Main L: Zone");
+
+        vTaskDelay(TICKS_50ms);
+        M5.Axp.SetLDO2(true); // turn on
+        vTaskDelay(TICKS_1s);
     }
 
     void createTask(int stackDepth)

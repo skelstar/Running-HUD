@@ -19,7 +19,6 @@ namespace ButtonMain
 	void clickHandler(Button2 &btn)
 	{
 		// Serial.printf("Main Button clicked\n");
-
 		packet.id++;
 		packet.button = ButtonOption::MAIN_BTN;
 		packet.event = CLICK;

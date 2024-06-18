@@ -19,18 +19,7 @@ namespace ButtonRst
 	{
 		Serial.printf("Rst Button clicked\n");
 
-		packet.id++;
-		packet.button = ButtonOption::RST_BTN;
-		packet.event = ButtonEvent::CLICK;
-
-		sendPacket(&packet);
-
-		/*
-		// close tft voltage output.
-		M5.Axp.SetLDO2(false);
-		// close tft lcd voltage output
-		M5.Axp.SetLDO3(false);
-		*/
+		esp_restart();
 	}
 
 	void longClickDetectedHandler()
