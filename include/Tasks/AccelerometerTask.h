@@ -5,7 +5,7 @@
 #include <elapsedMillis.h>
 #include <Types.h>
 
-#include <M5StickC.h>
+#include <M5StickCPlus.h>
 
 #include <I2C_MPU6886.h>
 
@@ -20,13 +20,13 @@ namespace AccelerometerTask
 
     // prototypes
     bool isDoubleTap(elapsedMillis sinceLastTap);
-    void sendPacket(ButtonPacket *packet);
+    void sendPacket(InputPacket *packet);
 
     void task1(void *pvParameters)
     {
         elapsedMillis sinceLastTap = 0;
 
-        ButtonPacket packet;
+        InputPacket packet;
 
         Serial.printf("%s: Started\n", taskName);
 
@@ -66,11 +66,11 @@ namespace AccelerometerTask
         return lastTap > doubleTapWindowL && lastTap < doubleTapWindowH;
     }
 
-    void sendPacket(ButtonPacket *packet)
+    void sendPacket(InputPacket *packet)
     {
-        ButtonPacket *data;
+        InputPacket *data;
         data = packet;
-        xQueueSend(xButtonQueue, (void *)&data, TICKS_10ms);
+        xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
     }
 
     void createTask(int stackDepth)

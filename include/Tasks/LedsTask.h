@@ -11,7 +11,7 @@ namespace Leds
     TaskHandle_t taskHandle = nullptr;
     const char *taskName = "LedsTask";
 
-    void handleButtonPacket(ButtonPacket *packet);
+    void handleButtonPacket(InputPacket *packet);
     void handlePacket(Bluetooth::Packet *packet);
 
     void task1(void *pvParameters)
@@ -44,8 +44,8 @@ namespace Leds
                 }
             }
 
-            ButtonPacket *buttonPacket = nullptr;
-            if (xQueuePeek(xButtonQueue, &(buttonPacket), TICKS_50ms) == pdTRUE)
+            InputPacket *buttonPacket = nullptr;
+            if (xQueuePeek(xInputsQueue, &(buttonPacket), TICKS_50ms) == pdTRUE)
             {
                 if (buttonPacket->id != buttonPacketId)
                 {
@@ -61,7 +61,7 @@ namespace Leds
         }
     }
 
-    void handleButtonPacket(ButtonPacket *packet)
+    void handleButtonPacket(InputPacket *packet)
     {
         switch (packet->button)
         {
@@ -74,7 +74,7 @@ namespace Leds
                 Leds::fsm.trigger(Leds::TR_CYCLE_BRIGHTNESS);
                 break;
             case ButtonEvent::LONGCLICK:
-                // Serial.printf("(LedsTask) xButtonQueue rxd: ACC_BTN event: LONG_CLICK\n");
+                // Serial.printf("(LedsTask) xInputsQueue rxd: ACC_BTN event: LONG_CLICK\n");
                 selectedZone = selectedZone == ZONE_TWO ? ZONE_THREE : ZONE_TWO;
                 Leds::fsm.trigger(Leds::TR_ZONE_CHANGE);
                 break;

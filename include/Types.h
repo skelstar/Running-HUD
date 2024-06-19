@@ -15,7 +15,7 @@ const uint16_t THREE_SECONDS = 3000;
 const uint16_t FOUR_SECONDS = 4000;
 const uint16_t FIVE_SECONDS = 5000;
 
-class ButtonPacket
+class InputPacket
 {
 public:
     unsigned long id = -1;

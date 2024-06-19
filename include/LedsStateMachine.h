@@ -116,24 +116,24 @@ namespace Leds
     {
         Serial.printf("onEnter_belowZone() \n");
         ledColour = COLOUR_WHITE;
-        setZoneFlashes(2, TWO_SECONDS);
         Leds::setLed(ledColour);
+        setZoneFlashes(2, TWO_SECONDS);
     }
 
     void onEnter_inZone()
     {
         Serial.printf("onEnter_inZone() \n");
         ledColour = COLOUR_GREEN;
-        setZoneFlashes(1, THREE_SECONDS);
         Leds::setLed(ledColour);
+        setZoneFlashes(3, THREE_SECONDS, FLASHES_ONE_OFF);
     }
 
     void onEnter_aboveZone()
     {
         Serial.printf("onEnter_aboveZone() \n");
         ledColour = COLOUR_RED;
-        setZoneFlashes(3, TWO_SECONDS);
         Leds::setLed(ledColour);
+        setZoneFlashes(2, ONE_SECONDS);
     }
 
     void onEnter_cycleBrightness()

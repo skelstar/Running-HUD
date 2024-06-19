@@ -12,10 +12,10 @@ namespace ClipDetectTask
     const char *taskName = "ClipDetectTask";
 
     // prototype
-    void sendPacket(ButtonPacket *packet);
+    void sendPacket(InputPacket *packet);
     bool clipDetected();
 
-    ButtonPacket packet;
+    InputPacket packet;
     elapsedMillis sinceCheckedClip = 0;
 
     void task1(void *pvParameters)
@@ -38,11 +38,11 @@ namespace ClipDetectTask
         }
     }
 
-    void sendPacket(ButtonPacket *packet)
+    void sendPacket(InputPacket *packet)
     {
-        ButtonPacket *data;
+        InputPacket *data;
         data = packet;
-        xQueueSend(xButtonQueue, (void *)&data, TICKS_10ms);
+        xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
     }
 
     bool clipDetected()

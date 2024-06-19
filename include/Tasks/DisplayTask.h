@@ -5,7 +5,7 @@
 #include <elapsedMillis.h>
 #include "Types.h"
 
-#include <M5StickC.h>
+#include <M5StickCPlus.h>
 
 namespace DisplayTask
 {
@@ -13,7 +13,7 @@ namespace DisplayTask
     const char *taskName = "DisplayTask";
 
     // prototypes
-    void handleButtonPacket(ButtonPacket *packet);
+    void handleButtonPacket(InputPacket *packet);
     void initScreen();
     void showStartupScreen();
 
@@ -34,8 +34,8 @@ namespace DisplayTask
 
         while (1)
         {
-            ButtonPacket *buttonPacket = nullptr;
-            if (xQueuePeek(xButtonQueue, &(buttonPacket), TICKS_50ms) == pdTRUE)
+            InputPacket *buttonPacket = nullptr;
+            if (xQueuePeek(xInputsQueue, &(buttonPacket), TICKS_50ms) == pdTRUE)
             {
                 if (buttonPacket->id != buttonPacketId)
                 {
@@ -49,7 +49,7 @@ namespace DisplayTask
         }
     }
 
-    void handleButtonPacket(ButtonPacket *packet)
+    void handleButtonPacket(InputPacket *packet)
     {
         switch (packet->button)
         {
