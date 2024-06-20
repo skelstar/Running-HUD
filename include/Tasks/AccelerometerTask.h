@@ -32,7 +32,6 @@ namespace AccelerometerTask
 
         vTaskDelay(100);
 
-        M5.begin();
         M5.Imu.Init();
 
         while (1)

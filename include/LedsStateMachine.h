@@ -41,12 +41,6 @@ namespace Leds
     uint32_t ledColour = Leds::COLOUR_OFF;
     uint8_t flashCounter = 0;
 
-    enum SelectedZone
-    {
-        ZONE_TWO,
-        ZONE_THREE,
-    } selectedZone;
-
     struct CurrentZone
     {
         uint8_t number;
@@ -145,10 +139,7 @@ namespace Leds
     void onEnter_zoneChange()
     {
         Serial.printf("onEnter_zoneChange() \n");
-        uint32_t col = selectedZone == SelectedZone::ZONE_TWO
-                           ? COLOUR_GREEN
-                           : COLOUR_RED;
-        setLed(col);
+        setLed(COLOUR_YELLOW);
     }
 
     void onEnter_idle() {}

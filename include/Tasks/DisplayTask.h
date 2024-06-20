@@ -24,8 +24,7 @@ namespace DisplayTask
     {
         Serial.printf("%s: Started\n", taskName);
 
-        M5.begin();
-        // M5.Axp.SetLDO2(false);
+        M5.Axp.SetLDO2(false);
         initScreen();
 
         showStartupScreen();

@@ -21,7 +21,6 @@ namespace BuzzerTask
     {
         Serial.printf("%s: Started\n", taskName);
 
-        M5.begin();
         M5.Beep.tone(4000);
         while (sinceBeep < 500)
         {

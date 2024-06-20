@@ -7,8 +7,10 @@
 // Queues
 QueueHandle_t xBluetoothQueue;
 QueueHandle_t xInputsQueue;
+QueueHandle_t xCommandQueue;
 
 #include "Tasks/BluetoothTask.h"
+#include "Tasks/CommandCentre.h"
 #include "Tasks/LedsTask.h"
 #include "Tasks/ButtonsTask.h"
 #include "Tasks/RedLedTask.h"
@@ -21,9 +23,13 @@ void setup()
 {
 	Serial.begin(115200);
 
+	M5.begin(/*lcd*/ false, /*power*/ true, /*serial*/ false);
+
 	xBluetoothQueue = xQueueCreate(1, sizeof(Bluetooth::Packet *));
 	xInputsQueue = xQueueCreate(1, sizeof(InputPacket *));
+	xCommandQueue = xQueueCreate(1, sizeof(Command *));
 
+	CommandCentre::createTask(2048);
 	BluetoothTask::createTask(4096);
 	Leds::createTask(8000);
 	ButtonsTask::createTask(2048);

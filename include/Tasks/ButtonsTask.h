@@ -15,6 +15,7 @@ namespace ButtonsTask
     const char *taskName = "ButtonsTask";
 
     InputPacket packet;
+    unsigned long packetId;
 
     namespace ButtonAcc
     {
@@ -81,7 +82,8 @@ namespace ButtonsTask
         void clickHandler(Button2 &btn)
         {
             // Serial.printf("Main Button clicked\n");
-            packet.id++;
+            packetId++;
+            packet.id = packetId;
             packet.button = ButtonOption::MAIN_BTN;
             packet.event = CLICK;
 
@@ -90,7 +92,9 @@ namespace ButtonsTask
 
         void longClickDetectedHandler(Button2 &btn)
         {
-            packet.id++;
+            // Serial.printf("Main Button long click\n");
+            packetId++;
+            packet.id = packetId;
             packet.button = ButtonOption::MAIN_BTN;
             packet.event = LONGCLICK;
 
@@ -150,8 +154,8 @@ namespace ButtonsTask
 
         void initialise()
         {
-            M5.begin();
-            M5.Axp.begin();
+            // M5.begin();
+            // M5.Axp.begin();
         }
     }
 
@@ -161,16 +165,13 @@ namespace ButtonsTask
 
         ButtonMain::initialise();
         ButtonAcc::initialise();
-        // ButtonRst::initialise();
+        ButtonRst::initialise();
 
         while (1)
         {
-            // update packet.id
-            xQueuePeek(xInputsQueue, (void *)&packet, TICKS_50ms);
-
             ButtonMain::button.loop();
             ButtonAcc::button.loop();
-            // ButtonRst::loop();
+            ButtonRst::loop();
 
             vTaskDelay(TICKS_5ms);
         }

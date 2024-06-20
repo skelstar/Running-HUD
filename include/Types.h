@@ -23,6 +23,23 @@ public:
     uint8_t event;
 };
 
+enum Command
+{
+    COMMAND_NOP,
+    COMMAND_BELOW_ZONE,
+    COMMAND_IN_ZONE,
+    COMMAND_ABOVE_ZONE,
+    COMMAND_CYCLE_BRIGHTNESS,
+    COMMAND_ZONE_CHANGE,
+};
+
+class CommandPacket
+{
+public:
+    unsigned long id = -1;
+    Command command;
+};
+
 enum ButtonOption
 {
     ACC_BTN,
