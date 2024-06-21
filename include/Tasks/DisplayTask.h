@@ -50,9 +50,9 @@ namespace DisplayTask
 
     void handleButtonPacket(InputPacket *packet)
     {
-        switch (packet->button)
+        switch (packet->input)
         {
-        case ButtonOption::MAIN_BTN:
+        case InputOption::MAIN_BTN:
             switch (packet->event)
             {
             case ButtonEvent::CLICK:

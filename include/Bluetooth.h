@@ -13,19 +13,8 @@ namespace Bluetooth
 	static BLEAdvertisedDevice *hrmDevice;
 	static BLERemoteCharacteristic *pRemoteCharacteristic;
 
-	enum ConnectionStatus
-	{
-		DISCONNECTED,
-		CONNECTED,
-		BELOW_ZONE,
-		IN_ZONE,
-		ABOVE_ZONE,
-		HZ_1,
-		HZ_2,
-		HZ_3,
-		HZ_4,
-		HZ_5,
-	};
+	// prototypes
+	void sendStatus(ConnectionStatus status);
 
 	class Packet
 	{
@@ -41,13 +30,7 @@ namespace Bluetooth
 		{
 			Serial.printf("%lu [info] Connected: %s\n", millis(), pclient->getPeerAddress().toString().c_str());
 
-			packet.id++;
-			packet.status = CONNECTED;
-			Packet *data;
-			data = &packet;
-
-			xQueueSend(xBluetoothQueue, (void *)&data, (TickType_t)1);
-			Serial.printf("xBluetoothQueue Send: CONNECTED id: %lu status: %d\n", packet.id, packet.status);
+			sendStatus(CONNECTED);
 		}
 
 		void onDisconnect(BLEClient *pclient)
@@ -56,13 +39,7 @@ namespace Bluetooth
 			doScan = true;
 			Serial.printf("%lu [info] Disconnected: %s\n", millis(), pclient->getPeerAddress().toString().c_str());
 
-			packet.id++;
-			packet.status = DISCONNECTED;
-			Packet *data;
-			data = &packet;
-
-			xQueueSend(xBluetoothQueue, (void *)&data, (TickType_t)1);
-			Serial.printf("xBluetoothQueue Send: DISCONNECTED id: %lu\n", packet.id);
+			sendStatus(DISCONNECTED);
 		}
 	};
 
@@ -162,9 +139,22 @@ namespace Bluetooth
 	{
 		if (doScan)
 		{
+			sendStatus(DISCONNECTED);
+
 			Serial.printf("%lu [info] Performing Scan...\n", millis());
 			BLEDevice::getScan()->start(5, false);
 			delay(5000);
 		}
+	}
+
+	void sendStatus(ConnectionStatus status)
+	{
+		packet.id++;
+		packet.status = status;
+		Packet *data;
+		data = &packet;
+
+		xQueueSend(xBluetoothQueue, (void *)&data, (TickType_t)1);
+		Serial.printf("xBluetoothQueue Send: %s id: %lu\n", getConnectionStatus(status), packet.id);
 	}
 }

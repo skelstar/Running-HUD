@@ -16,7 +16,6 @@ namespace Leds
     void task1(void *pvParameters)
     {
         unsigned long commandId = -1;
-        unsigned long buttonPacketId = -1;
 
         Serial.printf("%s: Started\n", taskName);
 

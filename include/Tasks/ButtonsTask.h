@@ -14,6 +14,9 @@ namespace ButtonsTask
     TaskHandle_t taskHandle = NULL;
     const char *taskName = "ButtonsTask";
 
+    // prototypes
+    void sendButtonEvent(ButtonEvent event, InputOption button);
+
     InputPacket packet;
     unsigned long packetId;
 
@@ -21,38 +24,19 @@ namespace ButtonsTask
     {
         Button2 button;
 
-        void sendPacket(InputPacket *packet)
-        {
-            InputPacket *data;
-            data = packet;
-            xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
-        }
-
         void clickHandler(Button2 &btn)
         {
-            packet.id++;
-            packet.button = ButtonOption::ACC_BTN;
-            packet.event = ButtonEvent::CLICK;
-
-            sendPacket(&packet);
+            sendButtonEvent(CLICK, ACC_BTN);
         }
 
         void longClickDetectedHandler(Button2 &btn)
         {
-            packet.id++;
-            packet.button = ButtonOption::ACC_BTN;
-            packet.event = ButtonEvent::LONGCLICK;
-
-            sendPacket(&packet);
+            sendButtonEvent(LONGCLICK, ACC_BTN);
         }
 
         void doubleTapHandler_cb(Button2 &btn)
         {
-            packet.id++;
-            packet.button = ButtonOption::ACC_BTN;
-            packet.event = ButtonEvent::DOUBLE_TAP;
-
-            sendPacket(&packet);
+            sendButtonEvent(DOUBLE_TAP, ACC_BTN);
         }
 
         void initialise()
@@ -72,43 +56,31 @@ namespace ButtonsTask
     {
         Button2 button;
 
-        void sendPacket(InputPacket *packet)
-        {
-            InputPacket *data;
-            data = packet;
-            xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
-        }
-
         void clickHandler(Button2 &btn)
         {
-            // Serial.printf("Main Button clicked\n");
-            packetId++;
-            packet.id = packetId;
-            packet.button = ButtonOption::MAIN_BTN;
-            packet.event = CLICK;
-
-            sendPacket(&packet);
+            sendButtonEvent(CLICK, MAIN_BTN);
         }
 
         void longClickDetectedHandler(Button2 &btn)
         {
-            // Serial.printf("Main Button long click\n");
-            packetId++;
-            packet.id = packetId;
-            packet.button = ButtonOption::MAIN_BTN;
-            packet.event = LONGCLICK;
+            sendButtonEvent(LONGCLICK, MAIN_BTN);
+        }
 
-            sendPacket(&packet);
+        void doubleTapHandler_cb(Button2 &btn)
+        {
+            sendButtonEvent(DOUBLE_TAP, MAIN_BTN);
         }
 
         void initialise()
         {
             button.begin(MAIN_BUTTON_PIN);
             button.setLongClickTime(LONGCLICK_MS);
+            button.setDoubleClickTime(500); // default: BTN_DOUBLECLICK_MS = 300
 
             // handlers
             button.setClickHandler(&clickHandler);
             button.setLongClickDetectedHandler(&longClickDetectedHandler);
+            button.setDoubleClickHandler(&doubleTapHandler_cb);
         }
     }
 
@@ -123,20 +95,12 @@ namespace ButtonsTask
 
         void clickHandler()
         {
-            Serial.printf("Rst Button clicked\n");
-
-            esp_restart();
+            sendButtonEvent(CLICK, RST_BTN);
         }
 
         void longClickDetectedHandler()
         {
-            Serial.printf("Rst Button long click\n");
-
-            packet.id++;
-            packet.button = ButtonOption::RST_BTN;
-            packet.event = ButtonEvent::LONGCLICK;
-
-            sendPacket(&packet);
+            sendButtonEvent(LONGCLICK, RST_BTN);
         }
 
         void loop()
@@ -154,8 +118,6 @@ namespace ButtonsTask
 
         void initialise()
         {
-            // M5.begin();
-            // M5.Axp.begin();
         }
     }
 
@@ -175,6 +137,20 @@ namespace ButtonsTask
 
             vTaskDelay(TICKS_5ms);
         }
+    }
+
+    void sendButtonEvent(ButtonEvent event, InputOption button)
+    {
+        Serial.printf("%s event: %s \n",
+                      getInputOption(button), getInputEvent(event));
+
+        packet.id++;
+        packet.event = event;
+        packet.input = button;
+
+        InputPacket *data;
+        data = &packet;
+        xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
     }
 
     void createTask(int stackDepth)

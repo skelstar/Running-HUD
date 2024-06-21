@@ -11,10 +11,9 @@ namespace RedLedTask
 
     void handlePacket(Bluetooth::Packet *packet);
 
-    elapsedMillis sinceFlashedLed = 0;
+    elapsedMillis sinceFlashedLed = 0, sinceFlashRedLedCommand = 0;
     bool m5ledState = false;
-    bool shouldFlashLed = true; // assume not connected straight away
-    unsigned long blePacketId = 0;
+    unsigned long commandId = -1;
 
     void task1(void *pvParameters)
     {
@@ -25,20 +24,23 @@ namespace RedLedTask
 
         while (1)
         {
-            Bluetooth::Packet *blePacket = nullptr;
+            CommandPacket *commandPacket = nullptr;
 
-            if (xQueuePeek(xBluetoothQueue, &(blePacket), TICKS_50ms) == pdTRUE)
+            if (xQueuePeek(xCommandQueue, &(commandPacket), TICKS_50ms) == pdTRUE)
             {
-                if (blePacket->id != blePacketId)
+                if (commandPacket->id != commandId)
                 {
-                    blePacketId = blePacket->id;
+                    commandId = commandPacket->id;
 
-                    handlePacket(blePacket);
+                    if (commandPacket->command == COMMAND_BELOW_ZONE ||
+                        commandPacket->command == COMMAND_DISCONNECTED)
+                        sinceFlashRedLedCommand = 0;
                 }
             }
 
-            uint16_t blinkMs = m5ledState == 0 ? 50 : 3000;
-            if (shouldFlashLed && sinceFlashedLed > blinkMs)
+            uint16_t blinkMs = m5ledState == 0 ? 50 : THREE_SECONDS;
+            if (sinceFlashedLed > blinkMs &&
+                sinceFlashRedLedCommand < TWO_SECONDS)
             {
                 sinceFlashedLed = 0;
                 m5ledState = !m5ledState;
@@ -47,12 +49,6 @@ namespace RedLedTask
 
             vTaskDelay(TICKS_50ms);
         }
-    }
-
-    void handlePacket(Bluetooth::Packet *packet)
-    {
-        shouldFlashLed = packet->status == Bluetooth::DISCONNECTED ||
-                         (packet->status == Bluetooth::CONNECTED && packet->hr < HZ1_TOP);
     }
 
     void createTask(int stackDepth)

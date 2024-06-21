@@ -47,7 +47,7 @@ namespace AccelerometerTask
                     Serial.printf("Double Tap!\n");
 
                     packet.id++;
-                    packet.button = ButtonOption::ACCEL;
+                    packet.input = InputOption::ACCEL;
                     packet.event = ButtonEvent::DOUBLE_TAP;
 
                     sendPacket(&packet);

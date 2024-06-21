@@ -19,7 +19,7 @@ class InputPacket
 {
 public:
     unsigned long id = -1;
-    uint8_t button;
+    uint8_t input;
     uint8_t event;
 };
 
@@ -31,6 +31,8 @@ enum Command
     COMMAND_ABOVE_ZONE,
     COMMAND_CYCLE_BRIGHTNESS,
     COMMAND_ZONE_CHANGE,
+    COMMAND_FLASH_RED_LED,
+    COMMAND_DISCONNECTED,
 };
 
 class CommandPacket
@@ -40,7 +42,7 @@ public:
     Command command;
 };
 
-enum ButtonOption
+enum InputOption
 {
     ACC_BTN,
     MAIN_BTN,
@@ -48,6 +50,26 @@ enum ButtonOption
     ACCEL,
     CLIP_DETECT,
 };
+
+char const *getInputOption(InputOption option)
+{
+    switch (option)
+    {
+    case ACC_BTN:
+        return "ACC_BTN";
+    case MAIN_BTN:
+        return "MAIN_BTN";
+    case RST_BTN:
+        return "RST_BTN";
+    case ACCEL:
+        return "ACCEL";
+    case CLIP_DETECT:
+        return "CLIP_DETECT";
+    default:
+        Serial.printf("ERROR: Unhandled option: %d \n", option);
+        return "UNHANDLED";
+    }
+}
 
 enum ButtonEvent
 {
@@ -57,3 +79,65 @@ enum ButtonEvent
     DETECTED,
     NOT_DETECTED,
 };
+
+char const *getInputEvent(ButtonEvent event)
+{
+    switch (event)
+    {
+    case CLICK:
+        return "CLICK";
+    case LONGCLICK:
+        return "LONGCLICK";
+    case DOUBLE_TAP:
+        return "DOUBLE_TAP";
+    case DETECTED:
+        return "DETECTED";
+    case NOT_DETECTED:
+        return "NOT_DETECTED";
+    default:
+        Serial.printf("ERROR: Unhandled event: %d\n", event);
+        return "UNHANDLED";
+    }
+}
+
+enum ConnectionStatus
+{
+    DISCONNECTED,
+    CONNECTED,
+    BELOW_ZONE,
+    IN_ZONE,
+    ABOVE_ZONE,
+    HZ_1,
+    HZ_2,
+    HZ_3,
+    HZ_4,
+    HZ_5,
+};
+
+char const *getConnectionStatus(ConnectionStatus status)
+{
+    switch (status)
+    {
+    case DISCONNECTED:
+        return "DISCONNECTED";
+    case CONNECTED:
+        return "CONNECTED";
+    case BELOW_ZONE:
+        return "BELOW_ZONE";
+    case IN_ZONE:
+        return "IN_ZONE";
+    case ABOVE_ZONE:
+        return "ABOVE_ZONE";
+    case HZ_1:
+        return "HZ_1";
+    case HZ_2:
+        return "HZ_2";
+    case HZ_3:
+        return "HZ_3";
+    case HZ_4:
+        return "HZ_4";
+    case HZ_5:
+        return "HZ_5";
+    }
+    return "ERROR: Unhandled status";
+}

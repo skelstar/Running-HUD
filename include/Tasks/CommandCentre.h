@@ -13,14 +13,14 @@ namespace CommandCentre
 
     // Prototypes
     void handleBlePacket(Bluetooth::Packet *packet);
-    void handleButtonPacket(InputPacket *packet);
+    void handleInputEvent(InputPacket *packet);
     Command getCommandForZone(uint8_t zone, uint8_t selectedZone);
     void sendCommand(Command command);
 
     enum SelectedZone
     {
-        ZONE_TWO,
-        ZONE_THREE,
+        ZONE_TWO_IS_IN_ZONE,
+        ZONE_THREE_IS_IN_ZONE,
     } selectedZone;
 
     unsigned long blePacketId = -1;
@@ -54,7 +54,7 @@ namespace CommandCentre
                 {
                     inputPacketId = inputPacket->id;
 
-                    handleButtonPacket(inputPacket);
+                    handleInputEvent(inputPacket);
                 }
             }
 
@@ -65,11 +65,11 @@ namespace CommandCentre
     Command getCommandForZone(uint8_t zone, uint8_t selectedZone)
     {
         if (zone == HZ2_TOP)
-            return selectedZone == ZONE_TWO
+            return selectedZone == ZONE_TWO_IS_IN_ZONE
                        ? Command::COMMAND_IN_ZONE
                        : Command::COMMAND_BELOW_ZONE;
         else if (zone == HZ3_TOP)
-            return selectedZone == ZONE_THREE
+            return selectedZone == ZONE_THREE_IS_IN_ZONE
                        ? Command::COMMAND_IN_ZONE
                        : Command::COMMAND_ABOVE_ZONE;
         else
@@ -83,31 +83,42 @@ namespace CommandCentre
 
         switch (packet->status)
         {
-        case Bluetooth::CONNECTED:
+        case ConnectionStatus::CONNECTED:
             if (packet->hr <= HZ1_TOP)
-                command = Command::COMMAND_BELOW_ZONE;
+            {
+                sendCommand(COMMAND_FLASH_RED_LED);
+                sendCommand(COMMAND_BELOW_ZONE);
+            }
             else if (packet->hr <= HZ2_TOP)
+            {
                 command = getCommandForZone(HZ2_TOP, selectedZone);
+                sendCommand(command);
+            }
             else if (packet->hr <= HZ3_TOP)
+            {
                 command = getCommandForZone(HZ3_TOP, selectedZone);
+                sendCommand(command);
+            }
             else if (packet->hr <= HZ4_TOP)
-                command = Command::COMMAND_ABOVE_ZONE;
+            {
+                sendCommand(COMMAND_ABOVE_ZONE);
+            }
             else // HZ5
-                command = Command::COMMAND_ABOVE_ZONE;
-            sendCommand(command);
+            {
+                sendCommand(COMMAND_ABOVE_ZONE);
+            }
             break;
 
-        case Bluetooth::DISCONNECTED:
-            sendCommand(command);
+        case ConnectionStatus::DISCONNECTED:
+            sendCommand(COMMAND_DISCONNECTED);
             break;
         }
     }
 
-    void handleButtonPacket(InputPacket *packet)
+    void handleInputEvent(InputPacket *packet)
     {
-        switch (packet->button)
+        if (packet->input == MAIN_BTN)
         {
-        case ButtonOption::MAIN_BTN:
             switch (packet->event)
             {
             case ButtonEvent::CLICK:
@@ -116,11 +127,10 @@ namespace CommandCentre
                 break;
             case ButtonEvent::LONGCLICK:
                 // Serial.printf("(LedsTask) xInputsQueue rxd: ACC_BTN event: LONG_CLICK\n");
-                selectedZone = selectedZone == ZONE_TWO ? ZONE_THREE : ZONE_TWO;
+                selectedZone = selectedZone == ZONE_TWO_IS_IN_ZONE ? ZONE_THREE_IS_IN_ZONE : ZONE_TWO_IS_IN_ZONE;
                 sendCommand(COMMAND_ZONE_CHANGE);
                 break;
             }
-            break;
         }
     }
 

@@ -29,7 +29,7 @@ namespace ClipDetectTask
             bool detected = clipDetected();
 
             packet.id++;
-            packet.button = ButtonOption::CLIP_DETECT;
+            packet.input = InputOption::CLIP_DETECT;
             packet.event = detected ? ButtonEvent::DETECTED : ButtonEvent::NOT_DETECTED;
 
             sendPacket(&packet);

@@ -33,7 +33,7 @@ void setup()
 	BluetoothTask::createTask(4096);
 	Leds::createTask(8000);
 	ButtonsTask::createTask(2048);
-	// RedLedTask::createTask(2048);
+	RedLedTask::createTask(2048);
 	// DisplayTask::createTask(2048);
 	// BuzzerTask::createTask(2048);
 	// ClipDetectTask::createTask(1024);
