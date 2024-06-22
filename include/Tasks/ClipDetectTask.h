@@ -12,42 +12,39 @@ namespace ClipDetectTask
     const char *taskName = "ClipDetectTask";
 
     // prototype
-    void sendPacket(InputPacket *packet);
-    bool clipDetected();
+    void sendDetected(bool detected);
 
-    InputPacket packet;
+#define G25 25
+#define G36 36
+
+    ClipDetectPacket packet;
     elapsedMillis sinceCheckedClip = 0;
 
     void task1(void *pvParameters)
     {
         Serial.printf("%s: Started\n", taskName);
 
-        pinMode(CLIP_DETECT_PIN, INPUT_PULLUP);
+        pinMode(G36, GPIO_FLOATING);
+        pinMode(G25, INPUT_PULLDOWN);
 
         while (1)
         {
-            bool detected = clipDetected();
+            bool detected = digitalRead(G25) == 1;
+            sendDetected(detected);
 
-            packet.id++;
-            packet.input = InputOption::CLIP_DETECT;
-            packet.event = detected ? ButtonEvent::DETECTED : ButtonEvent::NOT_DETECTED;
-
-            sendPacket(&packet);
-
-            vTaskDelay(TICKS_500ms);
+            vTaskDelay(TICKS_1s);
         }
     }
 
-    void sendPacket(InputPacket *packet)
+    void sendDetected(bool detected)
     {
-        InputPacket *data;
-        data = packet;
-        xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
-    }
+        packet.id++;
+        packet.status = detected ? CLIP_DETECTED : CLIP_NOT_DETECTED;
 
-    bool clipDetected()
-    {
-        return digitalRead(CLIP_DETECT_PIN) == 0;
+        ClipDetectPacket *data;
+        data = &packet;
+        xQueueSendToFront(xClipDetectQueue, (void *)&data, TICKS_10ms);
+        // Serial.printf("sending... CLIP: %s id: %d \n", detected ? "DETECTED" : "NOT DETECTED!", packet.id);
     }
 
     void createTask(int stackDepth)

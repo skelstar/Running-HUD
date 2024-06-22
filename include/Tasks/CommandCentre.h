@@ -14,6 +14,7 @@ namespace CommandCentre
     // Prototypes
     void handleBlePacket(Bluetooth::Packet *packet);
     void handleInputEvent(InputPacket *packet);
+    void handleClipDetectPacket(ClipDetectPacket *packet);
     Command getCommandForZone(uint8_t zone, uint8_t selectedZone);
     void sendCommand(Command command);
 
@@ -25,6 +26,7 @@ namespace CommandCentre
 
     unsigned long blePacketId = -1;
     unsigned long inputPacketId = -1;
+    unsigned long clipPacketId = -1;
     unsigned long commandPktId = -1;
 
     CommandPacket commandPacket;
@@ -58,6 +60,17 @@ namespace CommandCentre
                 }
             }
 
+            ClipDetectPacket *clipPacket = nullptr;
+            if (xQueuePeek(xClipDetectQueue, &(clipPacket), TICKS_50ms) == pdTRUE)
+            {
+                if (clipPacket->id != clipPacketId)
+                {
+                    clipPacketId = clipPacket->id;
+
+                    handleClipDetectPacket(clipPacket);
+                }
+            }
+
             vTaskDelay(TICKS_5ms);
         }
     }
@@ -86,7 +99,6 @@ namespace CommandCentre
         case ConnectionStatus::CONNECTED:
             if (packet->hr <= HZ1_TOP)
             {
-                sendCommand(COMMAND_FLASH_RED_LED);
                 sendCommand(COMMAND_BELOW_ZONE);
             }
             else if (packet->hr <= HZ2_TOP)
@@ -122,7 +134,7 @@ namespace CommandCentre
             switch (packet->event)
             {
             case ButtonEvent::CLICK:
-                // Serial.printf("LedTask Main Btn click\n");
+                // Serial.printf("CommandCentre: LedTask Main Btn click\n");
                 sendCommand(COMMAND_CYCLE_BRIGHTNESS);
                 break;
             case ButtonEvent::LONGCLICK:
@@ -134,6 +146,14 @@ namespace CommandCentre
         }
     }
 
+    void handleClipDetectPacket(ClipDetectPacket *packet)
+    {
+        if (packet->status == CLIP_NOT_DETECTED)
+        {
+            sendCommand(COMMAND_FLASH_RED_LED);
+        }
+    }
+
     void sendCommand(Command command)
     {
         commandPacket.id++;
@@ -141,7 +161,8 @@ namespace CommandCentre
 
         CommandPacket *data;
         data = &commandPacket;
-        xQueueSend(xCommandQueue, (void *)&data, TICKS_10ms);
+        xQueueSendToFront(xCommandQueue, (void *)&data, TICKS_10ms);
+        // Serial.printf("Command %s sent\n", getCommand(command));
     }
 
     void createTask(int stackDepth)

@@ -32,20 +32,23 @@ namespace RedLedTask
                 {
                     commandId = commandPacket->id;
 
-                    if (commandPacket->command == COMMAND_BELOW_ZONE ||
-                        commandPacket->command == COMMAND_DISCONNECTED)
+                    if (commandPacket->command == COMMAND_FLASH_RED_LED)
                         sinceFlashRedLedCommand = 0;
                 }
             }
 
             uint16_t blinkMs = m5ledState == 0 ? 50 : THREE_SECONDS;
             if (sinceFlashedLed > blinkMs &&
-                sinceFlashRedLedCommand < TWO_SECONDS)
+                sinceFlashRedLedCommand < ONE_SECONDS)
             {
                 sinceFlashedLed = 0;
                 m5ledState = !m5ledState;
-                digitalWrite(M5_LED_PIN, m5ledState);
             }
+            else
+            {
+                m5ledState = 1; // OFF
+            }
+            digitalWrite(M5_LED_PIN, m5ledState);
 
             vTaskDelay(TICKS_50ms);
         }

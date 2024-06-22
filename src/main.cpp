@@ -8,6 +8,7 @@
 QueueHandle_t xBluetoothQueue;
 QueueHandle_t xInputsQueue;
 QueueHandle_t xCommandQueue;
+QueueHandle_t xClipDetectQueue;
 
 #include "Tasks/BluetoothTask.h"
 #include "Tasks/CommandCentre.h"
@@ -28,6 +29,7 @@ void setup()
 	xBluetoothQueue = xQueueCreate(1, sizeof(Bluetooth::Packet *));
 	xInputsQueue = xQueueCreate(1, sizeof(InputPacket *));
 	xCommandQueue = xQueueCreate(1, sizeof(Command *));
+	xClipDetectQueue = xQueueCreate(1, sizeof(ClipDetectPacket *));
 
 	CommandCentre::createTask(2048);
 	BluetoothTask::createTask(4096);
@@ -36,7 +38,7 @@ void setup()
 	RedLedTask::createTask(2048);
 	// DisplayTask::createTask(2048);
 	// BuzzerTask::createTask(2048);
-	// ClipDetectTask::createTask(1024);
+	ClipDetectTask::createTask(2048);
 	// AccelerometerTask::createTask(2048);
 }
 

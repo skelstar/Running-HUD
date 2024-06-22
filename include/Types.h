@@ -23,6 +23,19 @@ public:
     uint8_t event;
 };
 
+enum ClipStatus
+{
+    CLIP_DETECTED,
+    CLIP_NOT_DETECTED,
+};
+
+class ClipDetectPacket
+{
+public:
+    unsigned long id;
+    ClipStatus status;
+};
+
 enum Command
 {
     COMMAND_NOP,
@@ -34,6 +47,31 @@ enum Command
     COMMAND_FLASH_RED_LED,
     COMMAND_DISCONNECTED,
 };
+
+char const *getCommand(Command command)
+{
+    switch (command)
+    {
+    case COMMAND_NOP:
+        return "COMMAND_NOP";
+    case COMMAND_BELOW_ZONE:
+        return "COMMAND_BELOW_ZONE";
+    case COMMAND_IN_ZONE:
+        return "COMMAND_IN_ZONE";
+    case COMMAND_ABOVE_ZONE:
+        return "COMMAND_ABOVE_ZONE";
+    case COMMAND_CYCLE_BRIGHTNESS:
+        return "COMMAND_CYCLE_BRIGHTNESS";
+    case COMMAND_ZONE_CHANGE:
+        return "COMMAND_ZONE_CHANGE";
+    case COMMAND_FLASH_RED_LED:
+        return "COMMAND_FLASH_RED_LED";
+    case COMMAND_DISCONNECTED:
+        return "COMMAND_DISCONNECTED";
+    default:
+        return "Unhandled command!";
+    }
+}
 
 class CommandPacket
 {

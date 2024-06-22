@@ -86,13 +86,6 @@ namespace ButtonsTask
 
     namespace ButtonRst
     {
-        void sendPacket(InputPacket *packet)
-        {
-            InputPacket *data;
-            data = packet;
-            xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
-        }
-
         void clickHandler()
         {
             sendButtonEvent(CLICK, RST_BTN);
@@ -141,16 +134,13 @@ namespace ButtonsTask
 
     void sendButtonEvent(ButtonEvent event, InputOption button)
     {
-        Serial.printf("%s event: %s \n",
-                      getInputOption(button), getInputEvent(event));
-
         packet.id++;
         packet.event = event;
         packet.input = button;
 
         InputPacket *data;
         data = &packet;
-        xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
+        xQueueSendToFront(xInputsQueue, (void *)&data, TICKS_10ms);
     }
 
     void createTask(int stackDepth)
