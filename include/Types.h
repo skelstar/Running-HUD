@@ -46,6 +46,7 @@ enum Command
     COMMAND_ZONE_CHANGE,
     COMMAND_FLASH_RED_LED,
     COMMAND_DISCONNECTED,
+    COMMAND_SHOW_INFO_SCREEN,
 };
 
 char const *getCommand(Command command)
@@ -68,6 +69,8 @@ char const *getCommand(Command command)
         return "COMMAND_FLASH_RED_LED";
     case COMMAND_DISCONNECTED:
         return "COMMAND_DISCONNECTED";
+    case COMMAND_SHOW_INFO_SCREEN:
+        return "COMMAND_SHOW_INFO_SCREEN";
     default:
         return "Unhandled command!";
     }

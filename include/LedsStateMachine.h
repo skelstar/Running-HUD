@@ -50,10 +50,10 @@ namespace Leds
         uint16_t flashWindow = TWO_SECONDS;
     } thisZone;
 
-    void flashLed()
+    void toggleLed()
     {
-        flashingState = !flashingState;
-        setLed(flashingState ? ledColour : COLOUR_OFF);
+        ledState = !ledState;
+        setLed(ledState ? ledColour : COLOUR_OFF);
         sinceFlashed = 0;
     }
 
@@ -64,32 +64,39 @@ namespace Leds
         thisZone.flashWindow = period;
     }
 
+#define FLASH_ON_TIME 20
+#define FLASH_OFF_TIME 100
+#define LED_OFF 0
+#define LED_ON 1
+
     void handleSchema(uint8_t schema)
     {
-        switch (schema)
+        if (schema == FLASHES_EACH_SECOND ||
+            schema == FLASHES_ONE_OFF)
         {
-        case FlashSchema::FLASHES_EACH_SECOND:
-        case FlashSchema::FLASHES_ONE_OFF:
-            if (sinceFlashed > 50 && flashCounter < thisZone.numFlashes)
+            uint16_t waitPeriod = ledState == LED_ON
+                                      ? FLASH_ON_TIME
+                                      : FLASH_OFF_TIME;
+
+            // toggle led if we need to
+            if (sinceFlashed > waitPeriod && flashCounter < thisZone.numFlashes)
             {
-                flashLed();
-                if (flashingState == 0)
+                toggleLed();
+                if (ledState == LED_OFF)
                     flashCounter++;
             }
-            // time to start flashes again (if flashes each second)?
-            else if (sinceFlashWindow > thisZone.flashWindow &&
-                     schema == FLASHES_EACH_SECOND)
+            // reset counters if windown finished
+            else if (schema == FLASHES_EACH_SECOND &&
+                     sinceFlashWindow > thisZone.flashWindow)
             {
                 sinceFlashWindow = 0;
                 flashCounter = 0;
             }
-            break;
-        case FlashSchema::FIFTY_FIFTY:
+        }
+        else if (schema == FIFTY_FIFTY)
+        {
             if (sinceFlashed > FLASH_5050_MS)
-                flashLed();
-            break;
-        default:
-            Serial.printf("Unhandled schema: %d\n", schema);
+                toggleLed();
         }
     }
 

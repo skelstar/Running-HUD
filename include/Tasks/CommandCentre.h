@@ -50,25 +50,21 @@ namespace CommandCentre
             }
 
             InputPacket *inputPacket = nullptr;
-            if (xQueuePeek(xInputsQueue, &(inputPacket), TICKS_50ms) == pdTRUE)
+            if (xQueuePeek(xInputsQueue, &(inputPacket), TICKS_50ms) == pdTRUE &&
+                inputPacket->id != inputPacketId)
             {
-                if (inputPacket->id != inputPacketId)
-                {
-                    inputPacketId = inputPacket->id;
+                inputPacketId = inputPacket->id;
 
-                    handleInputEvent(inputPacket);
-                }
+                handleInputEvent(inputPacket);
             }
 
             ClipDetectPacket *clipPacket = nullptr;
-            if (xQueuePeek(xClipDetectQueue, &(clipPacket), TICKS_50ms) == pdTRUE)
+            if (xQueuePeek(xClipDetectQueue, &(clipPacket), TICKS_50ms) == pdTRUE &&
+                clipPacket->id != clipPacketId)
             {
-                if (clipPacket->id != clipPacketId)
-                {
-                    clipPacketId = clipPacket->id;
+                clipPacketId = clipPacket->id;
 
-                    handleClipDetectPacket(clipPacket);
-                }
+                handleClipDetectPacket(clipPacket);
             }
 
             vTaskDelay(TICKS_5ms);
@@ -143,6 +139,11 @@ namespace CommandCentre
                 sendCommand(COMMAND_ZONE_CHANGE);
                 break;
             }
+        }
+        else if (packet->input == RST_BTN)
+        {
+            if (packet->event == CLICK)
+                esp_restart();
         }
     }
 

@@ -14,11 +14,14 @@ namespace DisplayTask
 
     // prototypes
     void handleButtonPacket(InputPacket *packet);
+    void handleCommandPacket(CommandPacket *packet);
     void initScreen();
     void showStartupScreen();
 
     unsigned long buttonPacketId = -1;
+    unsigned long commandPacketId = -1;
     bool displayOn = false;
+    elapsedMillis sinceShowInfoCommand = THREE_SECONDS;
 
     void task1(void *pvParameters)
     {
@@ -33,36 +36,30 @@ namespace DisplayTask
 
         while (1)
         {
-            InputPacket *buttonPacket = nullptr;
-            if (xQueuePeek(xInputsQueue, &(buttonPacket), TICKS_50ms) == pdTRUE)
+            CommandPacket *commandPacket = nullptr;
+            if (xQueuePeek(xCommandQueue, &(commandPacket), TICKS_50ms) == pdTRUE &&
+                commandPacket->id != commandPacketId)
             {
-                if (buttonPacket->id != buttonPacketId)
-                {
-                    buttonPacketId = buttonPacket->id;
+                commandPacketId = commandPacket->id;
 
-                    handleButtonPacket(buttonPacket);
-                }
+                handleCommandPacket(commandPacket);
             }
+
+            // if (sinceShowInfoCommand > TWO_SECONDS && displayOn)
+            // {
+            //     M5.Axp.SetLDO2(false);
+            //     displayOn = false;
+            // }
 
             vTaskDelay(TICKS_50ms);
         }
     }
 
-    void handleButtonPacket(InputPacket *packet)
+    void handleCommandPacket(CommandPacket *packet)
     {
-        switch (packet->input)
+        if (packet->command == COMMAND_SHOW_INFO_SCREEN)
         {
-        case InputOption::MAIN_BTN:
-            switch (packet->event)
-            {
-            case ButtonEvent::CLICK:
-                break;
-            case ButtonEvent::LONGCLICK:
-                break;
-            case ButtonEvent::DOUBLE_TAP:
-                break;
-            }
-            break;
+            sinceShowInfoCommand = 0;
         }
     }
 

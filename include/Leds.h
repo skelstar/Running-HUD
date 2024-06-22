@@ -41,7 +41,7 @@ namespace Leds
 	};
 
 	uint16_t flashingRateMs = 200;
-	bool flashingState = false;
+	bool ledState = false;
 	uint8_t _brightness = BRIGHT_MED; // middle
 
 	void setBrightness(uint8_t brightness)
