@@ -71,13 +71,19 @@ namespace BuzzerTask
 
     void handleCommandPacket(CommandPacket *packet)
     {
-        if (packet->command == COMMAND_SHORT_BEEP)
+        switch (packet->command)
         {
+        case COMMAND_CYCLE_BRIGHTNESS:
             beep(50);
-        }
-        else if (packet->command == COMMAND_ENDLESS_BEEP)
-        {
+            break;
+        case COMMAND_POWERING_DOWN:
             beep(SIX_SECONDS);
+            break;
+        case COMMAND_SET_CUSTOM_HR:
+            beep(50);
+            vTaskDelay(200);
+            beep(50);
+            break;
         }
     }
 

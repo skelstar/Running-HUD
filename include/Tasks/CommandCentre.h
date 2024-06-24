@@ -24,10 +24,15 @@ namespace CommandCentre
         ZONE_THREE_IS_IN_ZONE,
     } selectedZone;
 
+#define NO_CUSTOM_HR 0
+
     unsigned long blePacketId = -1;
     unsigned long inputPacketId = -1;
     unsigned long clipPacketId = -1;
     unsigned long commandPktId = -1;
+    uint8_t _customHeartRate = 0;
+    uint8_t _currentHr = 0;
+    bool _bleConnected = false;
 
     CommandPacket commandPacket;
 
@@ -44,6 +49,7 @@ namespace CommandCentre
                 if (blePacket->id != blePacketId)
                 {
                     blePacketId = blePacket->id;
+                    _currentHr = blePacket->hr;
 
                     handleBlePacket(blePacket);
                 }
@@ -86,6 +92,17 @@ namespace CommandCentre
         return Command::COMMAND_NOP;
     }
 
+    void sendCommandCustomHr(uint8_t hr)
+    {
+        Command command = hr <= _customHeartRate - 10
+                              ? COMMAND_BELOW_ZONE
+                          : hr <= _customHeartRate ? COMMAND_IN_ZONE
+                                                   : COMMAND_ABOVE_ZONE;
+        Serial.printf("(Custom) Sending command: %s (for custom: %d -> %d) \n",
+                      getCommand(command), _customHeartRate - 10, _customHeartRate);
+        sendCommand(command);
+    }
+
     void handleBlePacket(Bluetooth::Packet *packet)
     {
         Command command = COMMAND_NOP;
@@ -93,7 +110,12 @@ namespace CommandCentre
         switch (packet->status)
         {
         case ConnectionStatus::CONNECTED:
-            if (packet->hr <= HZ1_TOP)
+            _bleConnected = true;
+            if (_customHeartRate != NO_CUSTOM_HR)
+            {
+                sendCommandCustomHr(packet->hr);
+            }
+            else if (packet->hr <= HZ1_TOP)
             {
                 sendCommand(COMMAND_BELOW_ZONE);
             }
@@ -118,6 +140,7 @@ namespace CommandCentre
             break;
 
         case ConnectionStatus::DISCONNECTED:
+            _bleConnected = false;
             sendCommand(COMMAND_DISCONNECTED);
             break;
         }
@@ -131,13 +154,20 @@ namespace CommandCentre
             {
             case ButtonEvent::CLICK:
                 // Serial.printf("CommandCentre: LedTask Main Btn click\n");
-                sendCommand(COMMAND_SHORT_BEEP);
                 sendCommand(COMMAND_CYCLE_BRIGHTNESS);
                 break;
             case ButtonEvent::LONGCLICK:
                 // Serial.printf("(LedsTask) xInputsQueue rxd: ACC_BTN event: LONG_CLICK\n");
                 selectedZone = selectedZone == ZONE_TWO_IS_IN_ZONE ? ZONE_THREE_IS_IN_ZONE : ZONE_TWO_IS_IN_ZONE;
                 sendCommand(COMMAND_ZONE_CHANGE);
+                break;
+            case ButtonEvent::DOUBLE_TAP:
+                if (_bleConnected)
+                {
+                    _customHeartRate = _currentHr;
+                    Serial.printf("Setting top of HRZ to custom value: %dbpm \n", _customHeartRate);
+                    sendCommand(COMMAND_SET_CUSTOM_HR);
+                }
                 break;
             }
         }
@@ -147,7 +177,6 @@ namespace CommandCentre
                 esp_restart();
             if (packet->event == LONGCLICK)
             {
-                sendCommand(COMMAND_ENDLESS_BEEP);
                 sendCommand(COMMAND_POWERING_DOWN);
             }
         }
