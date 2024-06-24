@@ -37,7 +37,7 @@ void setup()
 	ButtonsTask::createTask(2048);
 	RedLedTask::createTask(2048);
 	DisplayTask::createTask(2048);
-	// BuzzerTask::createTask(2048);
+	BuzzerTask::createTask(2048);
 	ClipDetectTask::createTask(2048);
 	// AccelerometerTask::createTask(2048);
 }

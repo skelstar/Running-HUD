@@ -67,7 +67,7 @@ namespace CommandCentre
                 handleClipDetectPacket(clipPacket);
             }
 
-            vTaskDelay(TICKS_5ms);
+            vTaskDelay(TICKS_1ms);
         }
     }
 
@@ -131,6 +131,7 @@ namespace CommandCentre
             {
             case ButtonEvent::CLICK:
                 // Serial.printf("CommandCentre: LedTask Main Btn click\n");
+                sendCommand(COMMAND_SHORT_BEEP);
                 sendCommand(COMMAND_CYCLE_BRIGHTNESS);
                 break;
             case ButtonEvent::LONGCLICK:
@@ -144,6 +145,11 @@ namespace CommandCentre
         {
             if (packet->event == CLICK)
                 esp_restart();
+            if (packet->event == LONGCLICK)
+            {
+                sendCommand(COMMAND_ENDLESS_BEEP);
+                sendCommand(COMMAND_POWERING_DOWN);
+            }
         }
     }
 
@@ -162,7 +168,7 @@ namespace CommandCentre
 
         CommandPacket *data;
         data = &commandPacket;
-        xQueueSendToFront(xCommandQueue, (void *)&data, TICKS_10ms);
+        xQueueSendToFront(xCommandQueue, (void *)&data, TICKS_50ms);
         // Serial.printf("Command %s sent\n", getCommand(command));
     }
 

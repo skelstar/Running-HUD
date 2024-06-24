@@ -50,7 +50,7 @@ namespace RedLedTask
             }
             digitalWrite(M5_LED_PIN, m5ledState);
 
-            vTaskDelay(TICKS_50ms);
+            vTaskDelay(TICKS_10ms);
         }
     }
 

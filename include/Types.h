@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
+const TickType_t TICKS_1ms = 1 / portTICK_PERIOD_MS;
 const TickType_t TICKS_5ms = 5 / portTICK_PERIOD_MS;
 const TickType_t TICKS_10ms = 10 / portTICK_PERIOD_MS;
 const TickType_t TICKS_50ms = 50 / portTICK_PERIOD_MS;
@@ -14,6 +15,7 @@ const uint16_t TWO_SECONDS = 2000;
 const uint16_t THREE_SECONDS = 3000;
 const uint16_t FOUR_SECONDS = 4000;
 const uint16_t FIVE_SECONDS = 5000;
+const uint16_t SIX_SECONDS = 6000;
 
 class InputPacket
 {
@@ -47,6 +49,9 @@ enum Command
     COMMAND_FLASH_RED_LED,
     COMMAND_DISCONNECTED,
     COMMAND_SHOW_INFO_SCREEN,
+    COMMAND_SHORT_BEEP,
+    COMMAND_ENDLESS_BEEP,
+    COMMAND_POWERING_DOWN,
 };
 
 char const *getCommand(Command command)
@@ -71,6 +76,12 @@ char const *getCommand(Command command)
         return "COMMAND_DISCONNECTED";
     case COMMAND_SHOW_INFO_SCREEN:
         return "COMMAND_SHOW_INFO_SCREEN";
+    case COMMAND_SHORT_BEEP:
+        return "COMMAND_SHORT_BEEP";
+    case COMMAND_ENDLESS_BEEP:
+        return "COMMAND_ENDLESS_BEEP";
+    case COMMAND_POWERING_DOWN:
+        return "COMMAND_POWERING_DOWN";
     default:
         return "Unhandled command!";
     }

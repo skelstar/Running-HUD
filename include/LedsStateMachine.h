@@ -15,7 +15,7 @@ namespace Leds
         TR_ABOVE_ZONE,
         TR_CYCLE_BRIGHTNESS,
         TR_ZONE_CHANGE,
-        TR_POWER_DOWN,
+        TR_POWERING_DOWN,
     };
 
     enum StateName
@@ -216,11 +216,11 @@ namespace Leds
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
 
-        // TR_POWER_DOWN
-        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_POWER_DOWN], Trigger::TR_POWER_DOWN, &onRun),
-        Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWER_DOWN, &onRun),
-        Transition(&zone[STATE_IN_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWER_DOWN, &onRun),
-        Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWER_DOWN, &onRun),
+        // TR_POWERING_DOWN
+        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
+        Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
+        Transition(&zone[STATE_IN_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
     };
 
     void SetupFsm()

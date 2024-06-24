@@ -40,9 +40,9 @@ namespace Leds
                 }
             }
 
-            Leds::fsm.run(50);
+            fsm.run(5);
 
-            vTaskDelay(TICKS_50ms); // Delay for 500 ms
+            vTaskDelay(TICKS_10ms); // Delay for 500 ms
         }
     }
 
@@ -53,20 +53,23 @@ namespace Leds
         case COMMAND_NOP:
             break;
         case COMMAND_BELOW_ZONE:
-            Leds::fsm.trigger(TR_BELOW_ZONE);
+            fsm.trigger(TR_BELOW_ZONE);
             break;
         case COMMAND_IN_ZONE:
-            Leds::fsm.trigger(TR_IN_ZONE);
+            fsm.trigger(TR_IN_ZONE);
             break;
         case COMMAND_ABOVE_ZONE:
-            Leds::fsm.trigger(TR_ABOVE_ZONE);
+            fsm.trigger(TR_ABOVE_ZONE);
             break;
         case COMMAND_CYCLE_BRIGHTNESS:
             cycleBrightnessUp();
-            Leds::fsm.trigger(TR_CYCLE_BRIGHTNESS);
+            fsm.trigger(TR_CYCLE_BRIGHTNESS);
             break;
         case COMMAND_ZONE_CHANGE:
-            Leds::fsm.trigger(TR_ZONE_CHANGE);
+            fsm.trigger(TR_ZONE_CHANGE);
+            break;
+        case COMMAND_POWERING_DOWN:
+            fsm.trigger(TR_POWERING_DOWN);
             break;
         }
     }

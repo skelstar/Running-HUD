@@ -51,7 +51,7 @@ namespace DisplayTask
             //     displayOn = false;
             // }
 
-            vTaskDelay(TICKS_50ms);
+            vTaskDelay(TICKS_10ms);
         }
     }
 
