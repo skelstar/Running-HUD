@@ -15,6 +15,8 @@ namespace BluetoothTask
     {
         Serial.printf("%s: Started\n", taskName);
 
+        vTaskDelay(THREE_SECONDS);
+
         Bluetooth::initialise();
         // Bluetooth::InitBLEClients();
 
@@ -22,7 +24,7 @@ namespace BluetoothTask
         {
             // Bluetooth::PerformConnection();
 
-            if (Bluetooth::sinceStartedScanning > SECONDS_30)
+            if (Bluetooth::sinceStartedScanning > THIRTY_SECONDS)
             {
                 Bluetooth::startScan();
             }

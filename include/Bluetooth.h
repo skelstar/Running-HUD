@@ -88,17 +88,17 @@ namespace Bluetooth
 			if (address == hudControllerAddress && !pClient1->isConnected())
 			{
 				Serial.printf("Found HUD Controller, connecting...\n");
-				bool connected = pClient1->connect(&advertisedDevice);
+				pClient1->connect(&advertisedDevice);
 				subscribeToNotifications(pClient1);
-				Serial.printf("Connection: %s \n", connected ? "YES" : "FAIL");
+				// Serial.printf("Connection: %s \n", connected ? "YES" : "FAIL");
 			}
 			if (address == mockHrmAddress && !pClient2->isConnected())
 			{
 				// Serial.printf("Found %s, connecting...\n", name.c_str());
 				Serial.printf("Found HRM Mock, connecting...\n");
 				pClient2->connect(&advertisedDevice);
-				subscribeToNotifications(pClient2);
 				// Serial.printf("Connection: %s \n", connected ? "YES" : "FAIL");
+				subscribeToNotifications(pClient2);
 			}
 		}
 	};
