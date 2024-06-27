@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <elapsedMillis.h>
 
 #include "Bluetooth.h"
 
@@ -15,12 +16,20 @@ namespace BluetoothTask
         Serial.printf("%s: Started\n", taskName);
 
         Bluetooth::initialise();
+        // Bluetooth::InitBLEClients();
 
         while (1)
         {
-            Bluetooth::PerformConnection();
+            // Bluetooth::PerformConnection();
 
-            Bluetooth::PerformScan();
+            if (Bluetooth::sinceStartedScanning > SECONDS_30)
+            {
+                Bluetooth::startScan();
+            }
+
+            Bluetooth::handleReconnections();
+
+            // Bluetooth::PerformScan();
 
             vTaskDelay(TICKS_100ms);
         }
