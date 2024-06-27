@@ -16,6 +16,7 @@ const uint16_t THREE_SECONDS = 3000;
 const uint16_t FOUR_SECONDS = 4000;
 const uint16_t FIVE_SECONDS = 5000;
 const uint16_t SIX_SECONDS = 6000;
+const uint16_t THIRTY_SECONDS = 30 * 1000;
 
 class InputPacket
 {
