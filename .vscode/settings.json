@@ -32,6 +32,7 @@
     "vector": "cpp",
     "string_view": "cpp",
     "initializer_list": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "new": "cpp"
   }
 }
