@@ -1,12 +1,14 @@
 #pragma once
 #include <Arduino.h>
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEScan.h>
-#include <BLEAdvertisedDevice.h>
+#include "BLEDevice.h"
 
 namespace Bluetooth
 {
+	static BLEUUID hrServiceUUID(BLEUUID((uint16_t)0x180d));			   // BLE Heart Rate Service
+	static BLEUUID hrMeasureCharacteristicUUID(BLEUUID((uint16_t)0x2A37)); // BLE Heart Rate Measure Characteristic
+
+	const char *hudControllerAddress = "3c:71:bf:45:fe:16";
+	const char *mockHrmAddress = "b4:e6:2d:8b:93:f7";
 
 	static boolean doScan = true;
 	static boolean doConnect = false;
@@ -14,18 +16,11 @@ namespace Bluetooth
 	static BLEAdvertisedDevice *hrmDevice;
 	static BLERemoteCharacteristic *pRemoteCharacteristic;
 
+	BLEClient *controllerClient;
+	BLEClient *hrmClient;
+
 	// prototypes
 	void sendStatus(ConnectionStatus status);
-	void subscribeToNotifications(BLEClient *client);
-
-	static BLEUUID hrmServiceUUID(BLEUUID((uint16_t)0x180d)); // BLE Heart Rate Service
-	static BLEUUID hrCharUUID(BLEUUID((uint16_t)0x2A37));	  // BLE Heart Rate Measure Characteristic
-
-	const char *hudControllerAddress = "3c:71:bf:45:fe:16";
-	const char *mockHrmAddress = "b4:e6:2d:8b:93:f7";
-
-	BLEClient *pClient1;
-	BLEClient *pClient2;
 
 	class Packet
 	{
@@ -34,27 +29,6 @@ namespace Bluetooth
 		uint8_t hr;
 		unsigned long id = -1;
 	} packet;
-
-	static void handleHeartRate(uint8_t hr)
-	{
-		Serial.printf("My HR is %dbpm\n", hr);
-		packet.id++;
-		packet.hr = hr;
-		Packet *data;
-		data = &packet;
-
-		xQueueSend(xBluetoothQueue, (void *)&data, TICKS_5ms);
-	}
-
-	// BLE Heart Rate Measure Callback
-	static void notifyCallback(
-		BLERemoteCharacteristic *pBLERemoteCharacteristic,
-		uint8_t *pData,
-		size_t length,
-		bool isNotify)
-	{
-		handleHeartRate(pData[1]);
-	}
 
 	class MyClientCallback : public BLEClientCallbacks
 	{
@@ -79,99 +53,125 @@ namespace Bluetooth
 	{
 		void onResult(BLEAdvertisedDevice advertisedDevice)
 		{
-			std::string address = advertisedDevice.getAddress().toString();
-			std::string name = advertisedDevice.getName();
-			Serial.printf("server found: %s %s \n",
-						  !name.empty() ? name.c_str() : "Unknown",
-						  address.c_str());
-
-			if (address == hudControllerAddress && !pClient1->isConnected())
+			if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(hrServiceUUID))
 			{
-				Serial.printf("Found HUD Controller, connecting...\n");
-				pClient1->connect(&advertisedDevice);
-				subscribeToNotifications(pClient1);
-				// Serial.printf("Connection: %s \n", connected ? "YES" : "FAIL");
-			}
-			if (address == mockHrmAddress && !pClient2->isConnected())
-			{
-				// Serial.printf("Found %s, connecting...\n", name.c_str());
-				Serial.printf("Found HRM Mock, connecting...\n");
-				pClient2->connect(&advertisedDevice);
-				// Serial.printf("Connection: %s \n", connected ? "YES" : "FAIL");
-				subscribeToNotifications(pClient2);
+				Serial.printf("%lu [info] %s\n", millis(), advertisedDevice.toString().c_str());
+				BLEDevice::getScan()->stop();
+				hrmDevice = new BLEAdvertisedDevice(advertisedDevice);
+				doConnect = true;
+				doScan = false;
 			}
 		}
 	};
 
-	void subscribeToNotifications(BLEClient *client)
+	static void handleHeartRate(uint8_t hr)
 	{
-		BLERemoteService *pRemoteService = client->getService(hrmServiceUUID);
+		Serial.printf("My HR is %dbpm\n", hr);
+		packet.id++;
+		packet.hr = hr;
+		Packet *data;
+		data = &packet;
+
+		xQueueSend(xBluetoothQueue, (void *)&data, TICKS_5ms);
+	}
+
+	// BLE Heart Rate Measure Callback
+	static void notifyCallback(
+		BLERemoteCharacteristic *pBLERemoteCharacteristic,
+		uint8_t *pData,
+		size_t length,
+		bool isNotify)
+	{
+		handleHeartRate(pData[1]);
+	}
+
+	bool connectToServer(BLEClient *client, const char* address)
+	{
+		// BLEClient *client1 = BLEDevice::createClient();
+
+		bool connect = false;
+
+		client->setClientCallbacks(new MyClientCallback());
+		connect = client->connect(hrmDevice);
+		Serial.printf("Connecting client: %s \n", connect ? "OK" : "FAIL");
+
+		// try get service
+		BLERemoteService *pRemoteService = client->getService(hrServiceUUID);
 		if (pRemoteService == nullptr)
 		{
-			Serial.println("Failed to find service.");
-			return;
+			Serial.printf("client FAIL to get remote service.. \n");
+			client->disconnect();
+			return false;
 		}
 
-		BLERemoteCharacteristic *pRemoteCharacteristic = pRemoteService->getCharacteristic(hrCharUUID);
+		pRemoteCharacteristic = pRemoteService->getCharacteristic(hrMeasureCharacteristicUUID);
 		if (pRemoteCharacteristic == nullptr)
 		{
-			Serial.println("Failed to find characteristic.");
-			return;
+			client->disconnect();
+			return false;
 		}
 
 		if (pRemoteCharacteristic->canNotify())
 		{
 			pRemoteCharacteristic->registerForNotify(notifyCallback);
-			Serial.println("Subscribed to notifications.");
 		}
-	}
-
-#define SECONDS_30 30
-
-	void handleReconnections()
-	{
-		// Handle reconnections
-		if (!pClient1->isConnected())
+		else
 		{
-			Serial.println("Reconnecting to server 1...");
-			BLEDevice::getScan()->start(SECONDS_30, false);
+			Serial.printf("Remote characteristic can't notify! Client disconnecting \n");
+			client->disconnect();
+			return false;
 		}
 
-		if (!pClient2->isConnected())
-		{
-			Serial.println("Reconnecting to server 2...");
-			BLEDevice::getScan()->start(SECONDS_30, false);
-		}
-
-		delay(1000); // Adjust delay as needed
-	}
-
-	elapsedMillis sinceStartedScanning;
-
-	void startScan()
-	{
-		Serial.printf("Starting scan ......... \n");
-		BLEScan *pBLEScan = BLEDevice::getScan();
-		pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-		pBLEScan->setActiveScan(true); // Active scan uses more power but gets results faster
-		pBLEScan->start(SECONDS_30, false);
-		sinceStartedScanning = 0;
+		connected = true;
+		return true;
 	}
 
 	void initialise()
 	{
 		BLEDevice::init("");
 		BLEScan *pBLEScan = BLEDevice::getScan();
+		pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+		pBLEScan->setInterval(1349);
+		pBLEScan->setWindow(449);
+		pBLEScan->setActiveScan(true);
 
-		pClient1 = BLEDevice::createClient();
-		pClient2 = BLEDevice::createClient();
+		controllerClient = BLEDevice::createClient();
+		hrmClient = BLEDevice::createClient();
+	}
 
-		pClient1->setClientCallbacks(new MyClientCallback());
-		pClient2->setClientCallbacks(new MyClientCallback());
+	// uint8_t numDevicesConnected = 0;
 
-		sendStatus(DISCONNECTED);
+	void PerformConnection()
+	{
+		if (doConnect)
+		{
+			bool deviceConnected = false;
+			if (hrmClient->isConnected() == false)
+				connectToServer(hrmClient);
+			else if (controllerClient->isConnected() == false)
+				connectToServer(controllerClient);
 
-		startScan();
+			if (!deviceConnected)
+			{
+				Serial.printf("%lu [error] Failed to connect to HRM.\n", millis());
+			}
+			doConnect = !controllerClient->isConnected() || !hrmClient->isConnected();
+		}
+	}
+
+	void PerformScan()
+	{
+		if (!controllerClient->isConnected() || !hrmClient->isConnected())
+		{
+			sendStatus(DISCONNECTED);
+
+			Serial.printf("controllerClient->isConnected(): %s \n", controllerClient->isConnected() ? "YES" : "NO");
+			Serial.printf("hrmClient->isConnected(): %s \n", hrmClient->isConnected() ? "YES" : "NO");
+
+			Serial.printf("[info] Performing Scan...\n", millis());
+			BLEDevice::getScan()->start(5, false);
+			delay(5000);
+		}
 	}
 
 	void sendStatus(ConnectionStatus status)
