@@ -14,13 +14,15 @@ namespace BluetoothTask
     {
         Serial.printf("%s: Started\n", taskName);
 
+        vTaskDelay(THREE_SECONDS);
+
         Bluetooth::initialise();
 
         while (1)
         {
             Bluetooth::PerformConnection();
 
-            Bluetooth::PerformScan();
+            Bluetooth::StartScanning();
 
             vTaskDelay(TICKS_100ms);
         }

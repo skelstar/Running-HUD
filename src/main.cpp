@@ -24,6 +24,8 @@ void setup()
 {
 	Serial.begin(115200);
 
+	vTaskDelay(TICKS_1s);
+
 	M5.begin(/*lcd*/ false, /*power*/ true, /*serial*/ false);
 
 	xBluetoothQueue = xQueueCreate(1, sizeof(Bluetooth::Packet *));
