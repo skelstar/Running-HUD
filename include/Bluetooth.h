@@ -13,24 +13,57 @@ namespace Bluetooth
 	// const char *hudControllerAddress = "3c:71:bf:45:fe:16";
 	// const char *mockHrmAddress = "b4:e6:2d:8b:93:f7";
 
-	static boolean doScan = true;
-	static boolean doConnect = false;
-	static boolean connected = false;
 	static BLEAdvertisedDevice *hrmDevice;
 	static BLEAdvertisedDevice *controllerDevice;
 	static BLERemoteCharacteristic *pRemoteCharacteristic;
+
+#define NO_SCAN_TIMEOUT 0
+#define REPORT 1
+#define DONT_REPORT 0
 
 	class ClientInfo
 	{
 	public:
 		BLEClient *client;
 		BLEUUID serviceUUID;
-		bool doScan;
 		bool doConnect;
-	} controllerState, hrmState;
 
-	BLEClient *controllerClient;
-	BLEClient *hrmClient;
+		ClientInfo(unsigned long scanTimeout = NO_SCAN_TIMEOUT, bool report = DONT_REPORT)
+		{
+			_scanTimeout = scanTimeout;
+			client = BLEDevice::createClient();
+			_report = report;
+		}
+
+		// if less than _scanTimeout or _scanTimeout is zero (ie no timeout)
+		bool doScan()
+		{
+			bool scanning = (_scanTimeout == NO_SCAN_TIMEOUT || millis() < _scanTimeout) && _doScan;
+			// if (_report)
+			// 	Serial.printf("scanning: %d timeout: %lu millis: %lu doScan: %d \n",
+			// 				  scanning, _scanTimeout, millis(), _doScan);
+			return scanning;
+		}
+
+		void disconnected()
+		{
+			_doScan = true;
+		}
+
+		void connected()
+		{
+			_doScan = false;
+			doConnect = true;
+		}
+
+	private:
+		bool _doScan = true;
+		unsigned long _scanTimeout;
+		bool _report;
+	};
+
+	ClientInfo controllerState(ONE_MINUTE, DONT_REPORT);
+	ClientInfo hrmState(NO_SCAN_TIMEOUT, DONT_REPORT);
 
 	// prototypes
 	void sendStatus(ConnectionStatus status);
@@ -59,12 +92,12 @@ namespace Bluetooth
 			std::string disconnectedBleDeviceUUID = pclient->getPeerAddress().toString();
 			if (disconnectedBleDeviceUUID == controllerDevice->getAddress().toString())
 			{
-				hrmState.doScan = true;
+				hrmState.disconnected();
 				Serial.printf("[info] Disconnected: %s\n", "HUD Controller");
 			}
 			else if (disconnectedBleDeviceUUID == hrmDevice->getAddress().toString())
 			{
-				controllerState.doScan = true;
+				controllerState.disconnected();
 				Serial.printf("[info] Disconnected: %s\n", "HRM device");
 			}
 			else
@@ -82,26 +115,27 @@ namespace Bluetooth
 		{
 			if (advertisedDevice.haveServiceUUID())
 			{
-				if (advertisedDevice.isAdvertisingService(hrServiceUUID) && !hrmClient->isConnected())
+				if (advertisedDevice.isAdvertisingService(hrServiceUUID) &&
+					!hrmState.client->isConnected())
 				{
 					std::string name = advertisedDevice.getName();
 					Serial.printf("onResult() -> FOUND %s\n", name.c_str());
+					// TODO make device a part of state?
 					hrmDevice = new BLEAdvertisedDevice(advertisedDevice);
-					hrmState.doConnect = true;
-					hrmState.doScan = false;
+					hrmState.connected();
 				}
-				else if (advertisedDevice.isAdvertisingService(genericMediaControlServiceUUID) && !controllerClient->isConnected())
+				else if (advertisedDevice.isAdvertisingService(genericMediaControlServiceUUID) &&
+						 !controllerState.client->isConnected())
 				{
 					std::string name = advertisedDevice.getName();
 					Serial.printf("onResult() -> FOUND %s\n", name.c_str());
 					controllerDevice = new BLEAdvertisedDevice(advertisedDevice);
-					controllerState.doConnect = true;
-					controllerState.doScan = false;
+					controllerState.connected();
 				}
 			}
 
 			// if we have found both device, then we can stop scanning
-			if (!hrmState.doScan && !controllerState.doScan)
+			if (!hrmState.doScan() && !controllerState.doScan())
 			{
 				Serial.printf("Stopping scan \n");
 				BLEDevice::getScan()->stop();
@@ -144,9 +178,7 @@ namespace Bluetooth
 
 		client->setClientCallbacks(new MyClientCallback());
 		connect = client->connect(device);
-		Serial.printf("Connecting client (%s): %s \n",
-					  device->getName().c_str(),
-					  connect ? "OK" : "FAIL");
+		Serial.printf("Connecting client (%s): %s \n", device->getName().c_str(), connect ? "OK" : "FAIL");
 
 		// try get service
 		BLERemoteService *pRemoteService = client->getService(serviceUUID);
@@ -174,7 +206,7 @@ namespace Bluetooth
 			client->disconnect();
 			return false;
 		}
-		connected = true;
+
 		return true;
 	}
 
@@ -186,38 +218,31 @@ namespace Bluetooth
 		pBLEScan->setInterval(1349);
 		pBLEScan->setWindow(449);
 		pBLEScan->setActiveScan(true);
-
-		controllerClient = BLEDevice::createClient();
-
-		hrmClient = BLEDevice::createClient();
-
-		controllerState.doScan = true;
-		hrmState.doScan = true;
 	}
 
 	void PerformConnection()
 	{
-		if (hrmClient->isConnected() == false && hrmState.doConnect)
+		if (hrmState.client->isConnected() == false && hrmState.doConnect)
 		{
-			connectToServer(hrmClient, hrmDevice, hrServiceUUID, hrMeasureCharacteristicUUID);
+			bool connected = connectToServer(hrmState.client, hrmDevice, hrServiceUUID, hrMeasureCharacteristicUUID);
 			hrmState.doConnect = false;
 		}
 
-		if (controllerClient->isConnected() == false && controllerState.doConnect)
+		if (controllerState.client->isConnected() == false && controllerState.doConnect)
 		{
-			connectToServer(controllerClient, controllerDevice, genericMediaControlServiceUUID, controllerCharacteristicUUID);
+			bool connected = connectToServer(controllerState.client, controllerDevice, genericMediaControlServiceUUID, controllerCharacteristicUUID);
 			controllerState.doConnect = false;
 		}
 	}
 
-	void StartScanning()
+	void startScanning()
 	{
-		if (controllerState.doScan || hrmState.doScan)
+		if (controllerState.doScan() || hrmState.doScan())
 		{
 			sendStatus(DISCONNECTED);
 
-			Serial.printf("controllerClient->isConnected(): %s \n", controllerClient->isConnected() ? "YES" : "NO");
-			Serial.printf("hrmClient->isConnected(): %s \n", hrmClient->isConnected() ? "YES" : "NO");
+			Serial.printf("controllerClient->isConnected(): %s \n", controllerState.client->isConnected() ? "YES" : "NO");
+			Serial.printf("hrmClient->isConnected(): %s \n", hrmState.client->isConnected() ? "YES" : "NO");
 
 			Serial.printf("----------------\n[info] Performing Scan...\n", millis());
 			BLEDevice::getScan()->start(5, false);
