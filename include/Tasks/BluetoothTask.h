@@ -22,7 +22,7 @@ namespace BluetoothTask
         {
             Bluetooth::PerformConnection();
 
-            Bluetooth::StartScanning();
+            Bluetooth::startScanning();
 
             vTaskDelay(TICKS_100ms);
         }
