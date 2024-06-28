@@ -85,7 +85,7 @@ namespace Bluetooth
 		handleHeartRate(pData[1]);
 	}
 
-	bool connectToServer(BLEClient *client, const char* address)
+	bool connectToServer(BLEClient *client)
 	{
 		// BLEClient *client1 = BLEDevice::createClient();
 
