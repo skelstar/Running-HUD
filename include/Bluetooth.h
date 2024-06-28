@@ -10,8 +10,8 @@ namespace Bluetooth
 	static BLEUUID genericMediaControlServiceUUID(BLEUUID((uint16_t)0x1849));
 	static BLEUUID controllerCharacteristicUUID(BLEUUID((uint16_t)0x1234));
 
-	const char *hudControllerAddress = "3c:71:bf:45:fe:16";
-	const char *mockHrmAddress = "b4:e6:2d:8b:93:f7";
+	// const char *hudControllerAddress = "3c:71:bf:45:fe:16";
+	// const char *mockHrmAddress = "b4:e6:2d:8b:93:f7";
 
 	static boolean doScan = true;
 	static boolean doConnect = false;
@@ -47,16 +47,30 @@ namespace Bluetooth
 	{
 		void onConnect(BLEClient *pclient)
 		{
-			Serial.printf("%lu [info] Connected: %s\n", millis(), pclient->getPeerAddress().toString().c_str());
+			Serial.printf("[info] Connected: %s\n", pclient->getPeerAddress().toString().c_str());
 
 			sendStatus(CONNECTED);
 		}
 
 		void onDisconnect(BLEClient *pclient)
 		{
-			connected = false;
-			doScan = true;
-			Serial.printf("%lu [info] Disconnected: %s\n", millis(), pclient->getPeerAddress().toString().c_str());
+			Serial.printf("[info] Disconnected: %s\n", pclient->getPeerAddress().toString().c_str());
+
+			std::string disconnectedBleDeviceUUID = pclient->getPeerAddress().toString();
+			if (disconnectedBleDeviceUUID == controllerDevice->getAddress().toString())
+			{
+				hrmState.doScan = true;
+				Serial.printf("[info] Disconnected: %s\n", "HUD Controller");
+			}
+			else if (disconnectedBleDeviceUUID == hrmDevice->getAddress().toString())
+			{
+				controllerState.doScan = true;
+				Serial.printf("[info] Disconnected: %s\n", "HRM device");
+			}
+			else
+			{
+				Serial.printf("[info] Disconnected: %s\n", "Unknown device");
+			}
 
 			sendStatus(DISCONNECTED);
 		}
@@ -66,10 +80,8 @@ namespace Bluetooth
 	{
 		void onResult(BLEAdvertisedDevice advertisedDevice)
 		{
-			// Serial.printf("onResult() \n");
 			if (advertisedDevice.haveServiceUUID())
 			{
-				// Serial.printf("onResult() -> Advertised Service haveServiceUUID \n");
 				if (advertisedDevice.isAdvertisingService(hrServiceUUID) && !hrmClient->isConnected())
 				{
 					std::string name = advertisedDevice.getName();
@@ -87,6 +99,8 @@ namespace Bluetooth
 					controllerState.doScan = false;
 				}
 			}
+
+			// if we have found both device, then we can stop scanning
 			if (!hrmState.doScan && !controllerState.doScan)
 			{
 				Serial.printf("Stopping scan \n");
@@ -97,7 +111,7 @@ namespace Bluetooth
 
 	static void handleHeartRate(uint8_t hr)
 	{
-		Serial.printf("My HR is %dbpm\n", hr);
+		Serial.printf("[Notify] HR is %dbpm\n", hr);
 		packet.id++;
 		packet.hr = hr;
 		Packet *data;
@@ -106,16 +120,22 @@ namespace Bluetooth
 		xQueueSend(xBluetoothQueue, (void *)&data, TICKS_5ms);
 	}
 
-	// BLE Heart Rate Measure Callback
 	static void notifyCallback(
 		BLERemoteCharacteristic *pBLERemoteCharacteristic,
 		uint8_t *pData,
 		size_t length,
 		bool isNotify)
 	{
-		// Serial.printf("Notify callback! \n");
-		Serial.printf("Notify callback! %s \n", pBLERemoteCharacteristic->getUUID().toString().c_str());
-		// handleHeartRate(pData[1]);
+		std::string notifyCharUUID = pBLERemoteCharacteristic->getUUID().toString();
+
+		if (notifyCharUUID == hrMeasureCharacteristicUUID.toString())
+		{
+			handleHeartRate(pData[1]);
+		}
+		else if (notifyCharUUID == controllerCharacteristicUUID.toString())
+		{
+			Serial.printf("Notify callback! %s \n", "Controller Characteristic");
+		}
 	}
 
 	bool connectToServer(BLEClient *client, BLEAdvertisedDevice *device, BLEUUID serviceUUID, BLEUUID characteristicUUID)
@@ -154,7 +174,6 @@ namespace Bluetooth
 			client->disconnect();
 			return false;
 		}
-
 		connected = true;
 		return true;
 	}
@@ -180,14 +199,12 @@ namespace Bluetooth
 	{
 		if (hrmClient->isConnected() == false && hrmState.doConnect)
 		{
-			Serial.printf("Connecting to HRM \n");
 			connectToServer(hrmClient, hrmDevice, hrServiceUUID, hrMeasureCharacteristicUUID);
 			hrmState.doConnect = false;
 		}
 
 		if (controllerClient->isConnected() == false && controllerState.doConnect)
 		{
-			Serial.printf("Connecting to HUD Controller \n");
 			connectToServer(controllerClient, controllerDevice, genericMediaControlServiceUUID, controllerCharacteristicUUID);
 			controllerState.doConnect = false;
 		}
@@ -195,7 +212,6 @@ namespace Bluetooth
 
 	void StartScanning()
 	{
-		// if (!controllerClient->isConnected() || !hrmClient->isConnected())
 		if (controllerState.doScan || hrmState.doScan)
 		{
 			sendStatus(DISCONNECTED);
@@ -217,6 +233,5 @@ namespace Bluetooth
 		data = &packet;
 
 		xQueueSend(xBluetoothQueue, (void *)&data, (TickType_t)1);
-		// Serial.printf("xBluetoothQueue Send: %s id: %lu\n", getConnectionStatus(status), packet.id);
 	}
 }
