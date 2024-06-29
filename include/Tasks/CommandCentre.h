@@ -180,6 +180,16 @@ namespace CommandCentre
                 sendCommand(COMMAND_POWERING_DOWN);
             }
         }
+        else if (packet->input == CONTROLLER_BTN)
+        {
+            switch (packet->event)
+            {
+            case ControllerAction::Click:
+                Serial.printf("CommandCentre: CONTROLLER_BTN Click\n");
+                sendCommand(COMMAND_CYCLE_BRIGHTNESS);
+                break;
+            }
+        }
     }
 
     void handleClipDetectPacket(ClipDetectPacket *packet)
