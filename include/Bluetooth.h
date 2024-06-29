@@ -28,42 +28,46 @@ namespace Bluetooth
 		BLEUUID serviceUUID;
 		bool doConnect;
 
-		ClientInfo(unsigned long scanTimeout = NO_SCAN_TIMEOUT, bool report = DONT_REPORT)
+		ClientInfo(const char *name, unsigned long scanTimeout = NO_SCAN_TIMEOUT, bool report = DONT_REPORT)
 		{
+			_name = name;
 			_scanTimeout = scanTimeout;
 			client = BLEDevice::createClient();
 			_report = report;
 		}
 
 		// if less than _scanTimeout or _scanTimeout is zero (ie no timeout)
-		bool doScan()
+		bool doScan(bool report = DONT_REPORT)
 		{
-			bool scanning = (_scanTimeout == NO_SCAN_TIMEOUT || millis() < _scanTimeout) && _doScan;
-			// if (_report)
-			// 	Serial.printf("scanning: %d timeout: %lu millis: %lu doScan: %d \n",
-			// 				  scanning, _scanTimeout, millis(), _doScan);
-			return scanning;
+			bool doTheScan = (_scanTimeout == NO_SCAN_TIMEOUT || millis() < _scanTimeout) && _doScan;
+			// if (report)
+			// 	Serial.printf("doTheScan: %d timeout: %lu millis: %lu doScan: %d \n",
+			// 				  doTheScan, _scanTimeout, millis(), _doScan);
+			return doTheScan;
 		}
 
 		void disconnected()
 		{
 			_doScan = true;
+			Serial.printf("[event] %s disconnected! \n", _name);
 		}
 
-		void connected()
+		void found()
 		{
 			_doScan = false;
 			doConnect = true;
+			Serial.printf("[event] %s found! \n", _name);
 		}
 
 	private:
+		const char *_name = "NO NAME";
 		bool _doScan = true;
 		unsigned long _scanTimeout;
 		bool _report;
 	};
 
-	ClientInfo controllerState(ONE_MINUTE, DONT_REPORT);
-	ClientInfo hrmState(NO_SCAN_TIMEOUT, DONT_REPORT);
+	ClientInfo ctrlr("Controller", ONE_MINUTE, DONT_REPORT);
+	ClientInfo heart("HeartRate", NO_SCAN_TIMEOUT, DONT_REPORT);
 
 	// prototypes
 	void sendStatus(ConnectionStatus status);
@@ -90,19 +94,17 @@ namespace Bluetooth
 			Serial.printf("[info] Disconnected: %s\n", pclient->getPeerAddress().toString().c_str());
 
 			std::string disconnectedBleDeviceUUID = pclient->getPeerAddress().toString();
-			if (disconnectedBleDeviceUUID == controllerDevice->getAddress().toString())
+			if (disconnectedBleDeviceUUID == hrmDevice->getAddress().toString())
 			{
-				hrmState.disconnected();
-				Serial.printf("[info] Disconnected: %s\n", "HUD Controller");
+				heart.disconnected();
 			}
-			else if (disconnectedBleDeviceUUID == hrmDevice->getAddress().toString())
+			else if (disconnectedBleDeviceUUID == controllerDevice->getAddress().toString())
 			{
-				controllerState.disconnected();
-				Serial.printf("[info] Disconnected: %s\n", "HRM device");
+				ctrlr.disconnected();
 			}
 			else
 			{
-				Serial.printf("[info] Disconnected: %s\n", "Unknown device");
+				Serial.printf("[info] Unknown device disconnected: %s\n", pclient->getPeerAddress().toString().c_str());
 			}
 
 			sendStatus(DISCONNECTED);
@@ -116,32 +118,42 @@ namespace Bluetooth
 			if (advertisedDevice.haveServiceUUID())
 			{
 				if (advertisedDevice.isAdvertisingService(hrServiceUUID) &&
-					!hrmState.client->isConnected())
+					!heart.client->isConnected())
 				{
 					std::string name = advertisedDevice.getName();
 					Serial.printf("onResult() -> FOUND %s\n", name.c_str());
 					// TODO make device a part of state?
 					hrmDevice = new BLEAdvertisedDevice(advertisedDevice);
-					hrmState.connected();
+					heart.found();
 				}
 				else if (advertisedDevice.isAdvertisingService(genericMediaControlServiceUUID) &&
-						 !controllerState.client->isConnected())
+						 !ctrlr.client->isConnected())
 				{
 					std::string name = advertisedDevice.getName();
 					Serial.printf("onResult() -> FOUND %s\n", name.c_str());
 					controllerDevice = new BLEAdvertisedDevice(advertisedDevice);
-					controllerState.connected();
+					ctrlr.found();
 				}
 			}
 
 			// if we have found both device, then we can stop scanning
-			if (!hrmState.doScan() && !controllerState.doScan())
+			if (!heart.doScan() && !ctrlr.doScan())
 			{
 				Serial.printf("Stopping scan \n");
 				BLEDevice::getScan()->stop();
 			}
 		}
 	};
+
+	void handleHudControllerAction(uint8_t action)
+	{
+		Serial.printf("[Notify] Action is %s \n", getControllerAction(action));
+		InputPacket *data;
+		data->id = millis();
+		data->input = CONTROLLER_BTN;
+		data->event = action;
+		xQueueSend(xInputsQueue, (void *)&data, TICKS_10ms);
+	}
 
 	static void handleHeartRate(uint8_t hr)
 	{
@@ -168,31 +180,33 @@ namespace Bluetooth
 		}
 		else if (notifyCharUUID == controllerCharacteristicUUID.toString())
 		{
-			Serial.printf("Notify callback! %s \n", "Controller Characteristic");
+			handleHudControllerAction(pData[0]);
+			// Serial.printf("Notify callback! %s \n", "Controller Characteristic");
 		}
 	}
 
-	bool connectToServer(BLEClient *client, BLEAdvertisedDevice *device, BLEUUID serviceUUID, BLEUUID characteristicUUID)
+	bool connectToServer(ClientInfo clientInfo, BLEAdvertisedDevice *device, BLEUUID serviceUUID, BLEUUID characteristicUUID)
 	{
 		bool connect = false;
 
-		client->setClientCallbacks(new MyClientCallback());
-		connect = client->connect(device);
+		clientInfo.client->setClientCallbacks(new MyClientCallback());
+		connect = clientInfo.client->connect(device);
 		Serial.printf("Connecting client (%s): %s \n", device->getName().c_str(), connect ? "OK" : "FAIL");
 
 		// try get service
-		BLERemoteService *pRemoteService = client->getService(serviceUUID);
+		BLERemoteService *pRemoteService = clientInfo.client->getService(serviceUUID);
 		if (pRemoteService == nullptr)
 		{
 			Serial.printf("client FAIL to get remote service.. \n");
-			client->disconnect();
+			clientInfo.client->disconnect();
 			return false;
 		}
 
 		pRemoteCharacteristic = pRemoteService->getCharacteristic(characteristicUUID);
 		if (pRemoteCharacteristic == nullptr)
 		{
-			client->disconnect();
+			Serial.printf("client FAIL to get remote characteristic.. \n");
+			clientInfo.client->disconnect();
 			return false;
 		}
 
@@ -203,7 +217,7 @@ namespace Bluetooth
 		else
 		{
 			Serial.printf("Remote characteristic can't notify! Client disconnecting \n");
-			client->disconnect();
+			clientInfo.client->disconnect();
 			return false;
 		}
 
@@ -222,27 +236,29 @@ namespace Bluetooth
 
 	void PerformConnection()
 	{
-		if (hrmState.client->isConnected() == false && hrmState.doConnect)
+		if (heart.client->isConnected() == false && heart.doConnect)
 		{
-			bool connected = connectToServer(hrmState.client, hrmDevice, hrServiceUUID, hrMeasureCharacteristicUUID);
-			hrmState.doConnect = false;
+			bool connected = connectToServer(heart, hrmDevice, hrServiceUUID, hrMeasureCharacteristicUUID);
+			heart.doConnect = false;
 		}
 
-		if (controllerState.client->isConnected() == false && controllerState.doConnect)
+		if (ctrlr.client->isConnected() == false && ctrlr.doConnect)
 		{
-			bool connected = connectToServer(controllerState.client, controllerDevice, genericMediaControlServiceUUID, controllerCharacteristicUUID);
-			controllerState.doConnect = false;
+			bool connected = connectToServer(ctrlr, controllerDevice, genericMediaControlServiceUUID, controllerCharacteristicUUID);
+			ctrlr.doConnect = false;
 		}
 	}
 
 	void startScanning()
 	{
-		if (controllerState.doScan() || hrmState.doScan())
+		if (ctrlr.doScan() || heart.doScan())
 		{
-			sendStatus(DISCONNECTED);
+			// sendStatus(DISCONNECTED);
 
-			Serial.printf("controllerClient->isConnected(): %s \n", controllerState.client->isConnected() ? "YES" : "NO");
-			Serial.printf("hrmClient->isConnected(): %s \n", hrmState.client->isConnected() ? "YES" : "NO");
+			Serial.printf("controllerClient->isConnected(): %s doScan: %d \n",
+						  ctrlr.client->isConnected() ? "YES" : "NO", ctrlr.doScan());
+			Serial.printf("hrmClient->isConnected(): %s doScan: %d\n",
+						  heart.client->isConnected() ? "YES" : "NO", heart.doScan());
 
 			Serial.printf("----------------\n[info] Performing Scan...\n", millis());
 			BLEDevice::getScan()->start(5, false);

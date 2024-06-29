@@ -101,6 +101,7 @@ enum InputOption
     RST_BTN,
     ACCEL,
     CLIP_DETECT,
+    CONTROLLER_BTN,
 };
 
 char const *getInputOption(InputOption option)
@@ -117,6 +118,8 @@ char const *getInputOption(InputOption option)
         return "ACCEL";
     case CLIP_DETECT:
         return "CLIP_DETECT";
+    case CONTROLLER_BTN:
+        return "CONTROLLER_BTN";
     default:
         Serial.printf("ERROR: Unhandled option: %d \n", option);
         return "UNHANDLED";
@@ -148,6 +151,32 @@ char const *getInputEvent(ButtonEvent event)
         return "NOT_DETECTED";
     default:
         Serial.printf("ERROR: Unhandled event: %d\n", event);
+        return "UNHANDLED";
+    }
+}
+
+enum ControllerAction
+{
+    NoAction,
+    Click,
+    LongClick,
+    DoubleClick,
+};
+
+char const *getControllerAction(uint8_t action)
+{
+    switch (action)
+    {
+    case NoAction:
+        return "NoAction";
+    case Click:
+        return "Click";
+    case LongClick:
+        return "LongClick";
+    case DoubleClick:
+        return "DoubleClick";
+    default:
+        Serial.printf("ERROR: Unhandled event: %d\n", action);
         return "UNHANDLED";
     }
 }
