@@ -30,6 +30,7 @@ namespace Leds
 
 	enum FlashSchema
 	{
+		FLASHES_NONE,
 		FLASHES_EACH_SECOND,
 		FLASHES_ONE_OFF,
 		FIFTY_FIFTY,
@@ -43,6 +44,7 @@ namespace Leds
 	uint16_t flashingRateMs = 200;
 	bool ledState = false;
 	uint8_t _brightness = BRIGHT_MED; // middle
+	uint32_t currentColour = Leds::COLOUR_OFF;
 
 	void setBrightness(uint8_t brightness)
 	{
@@ -83,8 +85,10 @@ namespace Leds
 		setBrightness(_brightness);
 	}
 
-	void setLed(uint32_t color)
+	void setLed(uint32_t color, bool updateCurrentColour = true)
 	{
+		if (updateCurrentColour)
+			currentColour = color;
 		hudLed.setPixelColor(0, color);
 		hudLed.show();
 	}

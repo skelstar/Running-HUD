@@ -10,7 +10,9 @@ const TickType_t TICKS_500ms = 500 / portTICK_PERIOD_MS;
 const TickType_t TICKS_1s = 1000 / portTICK_PERIOD_MS;
 const TickType_t TICKS_2s = 2000 / portTICK_PERIOD_MS;
 
+const uint16_t TWO_THIRDS_SECONDS = 750;
 const uint16_t ONE_SECONDS = 1000;
+const uint16_t ONE_AND_HALF_SECONDS = 1500;
 const uint16_t TWO_SECONDS = 2000;
 const uint16_t THREE_SECONDS = 3000;
 const uint16_t FOUR_SECONDS = 4000;
@@ -47,6 +49,7 @@ enum Command
     COMMAND_BELOW_ZONE,
     COMMAND_IN_ZONE,
     COMMAND_ABOVE_ZONE,
+    COMMAND_ABOVE_ZONE_PLUS,
     COMMAND_CYCLE_BRIGHTNESS,
     COMMAND_ZONE_CHANGE,
     COMMAND_SET_CUSTOM_HR,
@@ -68,6 +71,8 @@ char const *getCommand(Command command)
         return "COMMAND_IN_ZONE";
     case COMMAND_ABOVE_ZONE:
         return "COMMAND_ABOVE_ZONE";
+    case COMMAND_ABOVE_ZONE_PLUS:
+        return "COMMAND_ABOVE_ZONE_PLUS";
     case COMMAND_CYCLE_BRIGHTNESS:
         return "COMMAND_CYCLE_BRIGHTNESS";
     case COMMAND_ZONE_CHANGE:
