@@ -61,6 +61,9 @@ namespace Leds
         case COMMAND_ABOVE_ZONE:
             fsm.trigger(TR_ABOVE_ZONE);
             break;
+        case COMMAND_ABOVE_ZONE_PLUS:
+            fsm.trigger(TR_ABOVE_ZONE_PLUS);
+            break;
         case COMMAND_CYCLE_BRIGHTNESS:
             cycleBrightnessUp();
             fsm.trigger(TR_CYCLE_BRIGHTNESS);

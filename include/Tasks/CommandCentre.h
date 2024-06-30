@@ -15,8 +15,9 @@ namespace CommandCentre
     void handleBlePacket(Bluetooth::Packet *packet);
     void handleInputEvent(InputPacket *packet);
     void handleClipDetectPacket(ClipDetectPacket *packet);
-    Command getCommandForZone(uint8_t zone, uint8_t selectedZone);
     void sendCommand(Command command);
+    uint8_t getBottomOfSelectedZone();
+    uint8_t getTopOfSelectedZone();
 
     enum SelectedZone
     {
@@ -33,12 +34,18 @@ namespace CommandCentre
     uint8_t _customHeartRate = 0;
     uint8_t _currentHr = 0;
     bool _bleConnected = false;
+    uint8_t topOfInZone;
+    uint8_t bottomOfInZone;
 
     CommandPacket commandPacket;
 
     void task1(void *pvParameters)
     {
         Serial.printf("%s: Started\n", taskName);
+
+        selectedZone = ZONE_TWO_IS_IN_ZONE;
+        topOfInZone = getTopOfSelectedZone();
+        bottomOfInZone = getBottomOfSelectedZone();
 
         while (1)
         {
@@ -77,21 +84,6 @@ namespace CommandCentre
         }
     }
 
-    Command getCommandForZone(uint8_t zone, uint8_t selectedZone)
-    {
-        if (zone == HZ2_TOP)
-            return selectedZone == ZONE_TWO_IS_IN_ZONE
-                       ? Command::COMMAND_IN_ZONE
-                       : Command::COMMAND_BELOW_ZONE;
-        else if (zone == HZ3_TOP)
-            return selectedZone == ZONE_THREE_IS_IN_ZONE
-                       ? Command::COMMAND_IN_ZONE
-                       : Command::COMMAND_ABOVE_ZONE;
-        else
-            Serial.printf("Unhandled 'zone' value: %d \n", zone);
-        return Command::COMMAND_NOP;
-    }
-
     void sendCommandCustomHr(uint8_t hr)
     {
         Command command = hr <= _customHeartRate - 10
@@ -101,6 +93,16 @@ namespace CommandCentre
         Serial.printf("(Custom) Sending command: %s (for custom: %d -> %d) \n",
                       getCommand(command), _customHeartRate - 10, _customHeartRate);
         sendCommand(command);
+    }
+
+    uint8_t getBottomOfSelectedZone()
+    {
+        return selectedZone == ZONE_TWO_IS_IN_ZONE ? HZ1_TOP : HZ2_TOP;
+    }
+
+    uint8_t getTopOfSelectedZone()
+    {
+        return selectedZone == ZONE_TWO_IS_IN_ZONE ? HZ2_TOP : HZ3_TOP;
     }
 
     void handleBlePacket(Bluetooth::Packet *packet)
@@ -115,27 +117,21 @@ namespace CommandCentre
             {
                 sendCommandCustomHr(packet->hr);
             }
-            else if (packet->hr <= HZ1_TOP)
+            else if (packet->hr <= bottomOfInZone)
             {
                 sendCommand(COMMAND_BELOW_ZONE);
             }
-            else if (packet->hr <= HZ2_TOP)
+            else if (packet->hr <= topOfInZone)
             {
-                command = getCommandForZone(HZ2_TOP, selectedZone);
-                sendCommand(command);
+                sendCommand(COMMAND_IN_ZONE);
             }
-            else if (packet->hr <= HZ3_TOP)
-            {
-                command = getCommandForZone(HZ3_TOP, selectedZone);
-                sendCommand(command);
-            }
-            else if (packet->hr <= HZ4_TOP)
+            else if (packet->hr <= topOfInZone + 3)
             {
                 sendCommand(COMMAND_ABOVE_ZONE);
             }
-            else // HZ5
+            else
             {
-                sendCommand(COMMAND_ABOVE_ZONE);
+                sendCommand(COMMAND_ABOVE_ZONE_PLUS);
             }
             break;
 
@@ -159,6 +155,8 @@ namespace CommandCentre
             case ButtonEvent::LONGCLICK:
                 // Serial.printf("(LedsTask) xInputsQueue rxd: ACC_BTN event: LONG_CLICK\n");
                 selectedZone = selectedZone == ZONE_TWO_IS_IN_ZONE ? ZONE_THREE_IS_IN_ZONE : ZONE_TWO_IS_IN_ZONE;
+                topOfInZone = getTopOfSelectedZone();
+                bottomOfInZone = getBottomOfSelectedZone();
                 sendCommand(COMMAND_ZONE_CHANGE);
                 break;
             case ButtonEvent::DOUBLE_TAP:

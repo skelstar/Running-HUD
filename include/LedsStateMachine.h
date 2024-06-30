@@ -13,6 +13,7 @@ namespace Leds
         TR_BELOW_ZONE,
         TR_IN_ZONE,
         TR_ABOVE_ZONE,
+        TR_ABOVE_ZONE_PLUS,
         TR_CYCLE_BRIGHTNESS,
         TR_ZONE_CHANGE,
         TR_POWERING_DOWN,
@@ -24,6 +25,7 @@ namespace Leds
         STATE_BELOW_ZONE,
         STATE_IN_ZONE,
         STATE_ABOVE_ZONE,
+        STATE_ABOVE_ZONE_PLUS,
         STATE_CYCLE_BRIGHTNESS,
         STATE_ZONE_CHANGE,
         STATE_IDLE,
@@ -38,7 +40,6 @@ namespace Leds
     elapsedMillis sinceEntered = 0;
     elapsedMillis sinceFlashed = 0;
     elapsedMillis sinceFlashWindow = 0;
-    uint32_t ledColour = Leds::COLOUR_OFF;
     uint8_t flashCounter = 0;
 
     struct CurrentZone
@@ -50,10 +51,12 @@ namespace Leds
         uint16_t flashWindow = TWO_SECONDS;
     } thisZone;
 
+#define DONT_UPDATE_CURRENT 0
+
     void toggleLed()
     {
         ledState = !ledState;
-        setLed(ledState ? ledColour : COLOUR_OFF);
+        setLed(ledState ? currentColour : COLOUR_OFF, DONT_UPDATE_CURRENT);
         sinceFlashed = 0;
     }
 
@@ -62,6 +65,15 @@ namespace Leds
         thisZone.schema = schema;
         thisZone.numFlashes = numFlashes;
         thisZone.flashWindow = period;
+    }
+
+    void setNoFlashes()
+    {
+        Leds::setLed(COLOUR_OFF);
+        thisZone.schema = FlashSchema::FLASHES_NONE;
+        // not sure if these matter
+        thisZone.numFlashes = 1;
+        thisZone.flashWindow = ONE_SECONDS;
     }
 
 #define FLASH_ON_TIME 20
@@ -98,13 +110,20 @@ namespace Leds
             if (sinceFlashed > FLASH_5050_MS)
                 toggleLed();
         }
+        else if (schema == FLASHES_NONE)
+        {
+            setLed(COLOUR_OFF);
+        }
     }
+
+#define NUM_FLASHES_BELOW_ZONE 2
+#define NUM_FLASHES_ABOVE_ZONE 1
+#define NUM_FLASHES_ABOVE_ZONE_PLUS 3
 
     void onEnter_disconnected()
     {
         Serial.printf("onEnter_disconnected()\n");
-        ledColour = COLOUR_BLUE;
-        setLed(ledColour);
+        setLed(COLOUR_BLUE);
         thisZone.schema = FlashSchema::FIFTY_FIFTY;
     }
 
@@ -116,31 +135,34 @@ namespace Leds
     void onEnter_belowZone()
     {
         Serial.printf("onEnter_belowZone() \n");
-        ledColour = COLOUR_WHITE;
-        Leds::setLed(ledColour);
-        setZoneFlashes(2, TWO_SECONDS);
+        Leds::setLed(COLOUR_WHITE);
+        setZoneFlashes(NUM_FLASHES_BELOW_ZONE, TWO_SECONDS);
     }
 
     void onEnter_inZone()
     {
         Serial.printf("onEnter_inZone() \n");
-        ledColour = COLOUR_GREEN;
-        Leds::setLed(ledColour);
-        setZoneFlashes(3, THREE_SECONDS, FLASHES_ONE_OFF);
+        setNoFlashes();
     }
 
     void onEnter_aboveZone()
     {
         Serial.printf("onEnter_aboveZone() \n");
-        ledColour = COLOUR_RED;
-        Leds::setLed(ledColour);
-        setZoneFlashes(2, ONE_SECONDS);
+        Leds::setLed(COLOUR_WHITE);
+        setZoneFlashes(NUM_FLASHES_ABOVE_ZONE, ONE_AND_HALF_SECONDS);
+    }
+
+    void onEnter_aboveZonePlus()
+    {
+        Serial.printf("onEnter_aboveZonePlus() \n");
+        Leds::setLed(COLOUR_YELLOW);
+        setZoneFlashes(NUM_FLASHES_ABOVE_ZONE_PLUS, TWO_THIRDS_SECONDS);
     }
 
     void onEnter_cycleBrightness()
     {
         Serial.printf("onEnter_cycleBrightness() \n");
-        setLed(ledColour);
+        setLed(currentColour);
     }
 
     void onEnter_zoneChange()
@@ -154,10 +176,10 @@ namespace Leds
     void onEnter_powerDown()
     {
         Serial.printf("onEnter_powerDown() \n");
-        ledColour = COLOUR_RED;
+        setBrightness(Brightness::BRIGHT_HIGHER);
+        Leds::setLed(COLOUR_RED);
         setZoneFlashes(8, TWO_SECONDS, FLASHES_ONE_OFF);
         Leds::setBrightness(BRIGHT_HIGH);
-        Leds::setLed(ledColour);
     }
 
     State zone[] = {
@@ -165,6 +187,7 @@ namespace Leds
         State("stateBelowZone", &onEnter_belowZone, &handleSchema_OnState),
         State("stateInZone", &onEnter_inZone, &handleSchema_OnState),
         State("stateAboveZone", &onEnter_aboveZone, &handleSchema_OnState),
+        State("stateAboveZonePlus", &onEnter_aboveZonePlus, &handleSchema_OnState),
         State("stateCycleBrightness", &onEnter_cycleBrightness),
         State("stateZoneChange", &onEnter_zoneChange),
         State("stateIdle", &onEnter_idle),
@@ -191,8 +214,14 @@ namespace Leds
 
         // TR_ABOVE_ZONE
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
+
+        // TR_ABOVE_ZONE_PLUS
+        Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
+        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
+        Transition(&zone[STATE_IDLE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
 
         // TR_BELOW_ZONE
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
