@@ -84,24 +84,21 @@ namespace CommandCentre
         }
     }
 
-    void sendCommandCustomHr(uint8_t hr)
-    {
-        Command command = hr <= _customHeartRate - 10
-                              ? COMMAND_BELOW_ZONE
-                          : hr <= _customHeartRate ? COMMAND_IN_ZONE
-                                                   : COMMAND_ABOVE_ZONE;
-        Serial.printf("(Custom) Sending command: %s (for custom: %d -> %d) \n",
-                      getCommand(command), _customHeartRate - 10, _customHeartRate);
-        sendCommand(command);
-    }
-
     uint8_t getBottomOfSelectedZone()
     {
+        if (_customHeartRate != NO_CUSTOM_HR)
+        {
+            return _customHeartRate - 10;
+        }
         return selectedZone == ZONE_TWO_IS_IN_ZONE ? HZ1_TOP : HZ2_TOP;
     }
 
     uint8_t getTopOfSelectedZone()
     {
+        if (_customHeartRate != NO_CUSTOM_HR)
+        {
+            return _customHeartRate;
+        }
         return selectedZone == ZONE_TWO_IS_IN_ZONE ? HZ2_TOP : HZ3_TOP;
     }
 
@@ -113,26 +110,14 @@ namespace CommandCentre
         {
         case ConnectionStatus::CONNECTED:
             _bleConnected = true;
-            if (_customHeartRate != NO_CUSTOM_HR)
-            {
-                sendCommandCustomHr(packet->hr);
-            }
-            else if (packet->hr <= bottomOfInZone)
-            {
+            if (packet->hr <= bottomOfInZone)
                 sendCommand(COMMAND_BELOW_ZONE);
-            }
             else if (packet->hr <= topOfInZone)
-            {
                 sendCommand(COMMAND_IN_ZONE);
-            }
             else if (packet->hr <= topOfInZone + 3)
-            {
                 sendCommand(COMMAND_ABOVE_ZONE);
-            }
             else
-            {
                 sendCommand(COMMAND_ABOVE_ZONE_PLUS);
-            }
             break;
 
         case ConnectionStatus::DISCONNECTED:
@@ -162,9 +147,18 @@ namespace CommandCentre
             case ButtonEvent::DOUBLE_TAP:
                 if (_bleConnected)
                 {
-                    _customHeartRate = _currentHr;
-                    Serial.printf("Setting top of HRZ to custom value: %dbpm \n", _customHeartRate);
-                    sendCommand(COMMAND_SET_CUSTOM_HR);
+                    if (_customHeartRate == NO_CUSTOM_HR)
+                    {
+                        _customHeartRate = _currentHr;
+                        Serial.printf("Setting top of HRZ to custom value: %dbpm \n", _customHeartRate);
+                        sendCommand(COMMAND_SET_CUSTOM_HR);
+                    }
+                    else
+                    {
+                        _customHeartRate = NO_CUSTOM_HR;
+                        Serial.printf("Clearing custom hr to: NO_CUSTOM_HR\n");
+                        sendCommand(COMMAND_CLEAR_CUSTOM_HR);
+                    }
                 }
                 break;
             }

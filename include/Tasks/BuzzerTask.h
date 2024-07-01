@@ -84,6 +84,9 @@ namespace BuzzerTask
             vTaskDelay(200);
             beep(50);
             break;
+        case COMMAND_CLEAR_CUSTOM_HR:
+            beep(300);
+            break;
         }
     }
 

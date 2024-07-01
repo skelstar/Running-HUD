@@ -71,6 +71,10 @@ namespace Leds
         case COMMAND_ZONE_CHANGE:
             fsm.trigger(TR_ZONE_CHANGE);
             break;
+        case COMMAND_SET_CUSTOM_HR:
+        case COMMAND_CLEAR_CUSTOM_HR:
+            fsm.trigger(TR_CUSTOM_HEARTRATE);
+            break;
         case COMMAND_POWERING_DOWN:
             fsm.trigger(TR_POWERING_DOWN);
             break;
