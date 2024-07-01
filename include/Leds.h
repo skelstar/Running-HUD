@@ -44,6 +44,7 @@ namespace Leds
 	uint16_t flashingRateMs = 200;
 	bool ledState = false;
 	uint8_t _brightness = BRIGHT_MED; // middle
+	uint8_t _oldBrightness = _brightness;
 	uint32_t currentColour = Leds::COLOUR_OFF;
 
 	void setBrightness(uint8_t brightness)

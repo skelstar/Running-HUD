@@ -17,6 +17,7 @@ namespace Leds
         TR_CYCLE_BRIGHTNESS,
         TR_ZONE_CHANGE,
         TR_POWERING_DOWN,
+        TR_CUSTOM_HEARTRATE,
     };
 
     enum StateName
@@ -30,6 +31,7 @@ namespace Leds
         STATE_ZONE_CHANGE,
         STATE_IDLE,
         STATE_POWER_DOWN,
+        STATE_CUSTOM_HEART_RATE,
     };
 
 #define FLASH_5050_MS 500
@@ -155,7 +157,7 @@ namespace Leds
     void onEnter_aboveZonePlus()
     {
         Serial.printf("onEnter_aboveZonePlus() \n");
-        Leds::setLed(COLOUR_YELLOW);
+        Leds::setLed(COLOUR_WHITE);
         setZoneFlashes(NUM_FLASHES_ABOVE_ZONE_PLUS, TWO_THIRDS_SECONDS);
     }
 
@@ -182,6 +184,20 @@ namespace Leds
         Leds::setBrightness(BRIGHT_HIGH);
     }
 
+    void onEnter_customHeartRate()
+    {
+        Serial.printf("onEnter_customHeartRate() \n");
+        _oldBrightness = _brightness;
+        setBrightness(Brightness::BRIGHT_HIGHER);
+        Leds::setLed(COLOUR_BLUE);
+        setZoneFlashes(8, ONE_SECONDS, FLASHES_ONE_OFF);
+    }
+
+    void onExit_customerHeartRate()
+    {
+        setBrightness(_oldBrightness);
+    }
+
     State zone[] = {
         State("stateDisconnected", &onEnter_disconnected, &handleSchema_OnState),
         State("stateBelowZone", &onEnter_belowZone, &handleSchema_OnState),
@@ -191,7 +207,9 @@ namespace Leds
         State("stateCycleBrightness", &onEnter_cycleBrightness),
         State("stateZoneChange", &onEnter_zoneChange),
         State("stateIdle", &onEnter_idle),
-        State("statePowerDown", &onEnter_powerDown, &handleSchema_OnState)};
+        State("statePowerDown", &onEnter_powerDown, &handleSchema_OnState),
+        State("stateCustomHeartRate", &onEnter_customHeartRate, &handleSchema_OnState, &onExit_customerHeartRate),
+    };
 
     void onRun()
     {
@@ -202,13 +220,15 @@ namespace Leds
 
     TimedTransition timedTransitions[] = {
         TimedTransition(&zone[STATE_CYCLE_BRIGHTNESS], &zone[STATE_IDLE], 500),
-        TimedTransition(&zone[STATE_ZONE_CHANGE], &zone[STATE_IDLE], 1000),
+        TimedTransition(&zone[STATE_ZONE_CHANGE], &zone[STATE_IDLE], ONE_SECONDS),
+        TimedTransition(&zone[STATE_CUSTOM_HEART_RATE], &zone[STATE_IDLE], ONE_SECONDS),
     };
 
     Transition transitions[] = {
         // TR_IN_ZONE
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
 
@@ -219,6 +239,7 @@ namespace Leds
         Transition(&zone[STATE_IDLE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
 
         // TR_ABOVE_ZONE_PLUS
+        Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
@@ -232,6 +253,7 @@ namespace Leds
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
 
         // -> TR_CYCLE_BRIGHTNESS
@@ -239,17 +261,27 @@ namespace Leds
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
 
         // -> TR_ZONE_CHANGE
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
 
         // TR_POWERING_DOWN
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
+
+        // TR_CUSTOM_HEARTRATE
+        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
+        Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
+        Transition(&zone[STATE_IN_ZONE], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
     };
 
     void SetupFsm()
