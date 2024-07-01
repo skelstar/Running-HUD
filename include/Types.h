@@ -50,6 +50,7 @@ enum Command
     COMMAND_IN_ZONE,
     COMMAND_ABOVE_ZONE,
     COMMAND_ABOVE_ZONE_PLUS,
+    COMMAND_AT_LTHR,
     COMMAND_CYCLE_BRIGHTNESS,
     COMMAND_ZONE_CHANGE,
     COMMAND_SET_CUSTOM_HR,
@@ -74,6 +75,8 @@ char const *getCommand(Command command)
         return "COMMAND_ABOVE_ZONE";
     case COMMAND_ABOVE_ZONE_PLUS:
         return "COMMAND_ABOVE_ZONE_PLUS";
+    case COMMAND_AT_LTHR:
+        return "COMMAND_AT_LTHR";
     case COMMAND_CYCLE_BRIGHTNESS:
         return "COMMAND_CYCLE_BRIGHTNESS";
     case COMMAND_ZONE_CHANGE:

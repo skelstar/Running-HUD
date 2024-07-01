@@ -12,15 +12,15 @@ namespace RedLedTask
     void handlePacket(Bluetooth::Packet *packet);
 
     elapsedMillis sinceFlashedLed = 0, sinceFlashRedLedCommand = 0;
-    bool m5ledState = false;
+    bool redLedState = false;
     unsigned long commandId = -1;
 
     void task1(void *pvParameters)
     {
         Serial.printf("%s: Started\n", taskName);
 
-        pinMode(M5_LED_PIN, OUTPUT);
-        digitalWrite(M5_LED_PIN, HIGH); // off
+        pinMode(RED_LED_PIN, OUTPUT);
+        digitalWrite(RED_LED_PIN, HIGH); // off
 
         while (1)
         {
@@ -37,18 +37,18 @@ namespace RedLedTask
                 }
             }
 
-            uint16_t blinkMs = m5ledState == 0 ? 50 : THREE_SECONDS;
+            uint16_t blinkMs = redLedState == 0 ? 50 : THREE_SECONDS;
             if (sinceFlashedLed > blinkMs &&
                 sinceFlashRedLedCommand < ONE_SECONDS)
             {
                 sinceFlashedLed = 0;
-                m5ledState = !m5ledState;
+                redLedState = !redLedState;
             }
             else
             {
-                m5ledState = 1; // OFF
+                redLedState = 1; // OFF
             }
-            digitalWrite(M5_LED_PIN, m5ledState);
+            digitalWrite(RED_LED_PIN, redLedState);
 
             vTaskDelay(TICKS_10ms);
         }

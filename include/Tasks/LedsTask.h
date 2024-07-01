@@ -42,7 +42,7 @@ namespace Leds
 
             fsm.run(5);
 
-            vTaskDelay(TICKS_10ms); // Delay for 500 ms
+            vTaskDelay(TICKS_10ms);
         }
     }
 
@@ -63,6 +63,9 @@ namespace Leds
             break;
         case COMMAND_ABOVE_ZONE_PLUS:
             fsm.trigger(TR_ABOVE_ZONE_PLUS);
+            break;
+        case COMMAND_AT_LTHR:
+            fsm.trigger(TR_AT_LTHR);
             break;
         case COMMAND_CYCLE_BRIGHTNESS:
             cycleBrightnessUp();

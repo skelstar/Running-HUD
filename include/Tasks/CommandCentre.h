@@ -36,6 +36,7 @@ namespace CommandCentre
     bool _bleConnected = false;
     uint8_t topOfInZone;
     uint8_t bottomOfInZone;
+    const uint8_t LTHR = 157;
 
     CommandPacket commandPacket;
 
@@ -116,8 +117,10 @@ namespace CommandCentre
                 sendCommand(COMMAND_IN_ZONE);
             else if (packet->hr <= topOfInZone + 3)
                 sendCommand(COMMAND_ABOVE_ZONE);
-            else
+            else if (packet->hr < LTHR)
                 sendCommand(COMMAND_ABOVE_ZONE_PLUS);
+            else
+                sendCommand(COMMAND_AT_LTHR);
             break;
 
         case ConnectionStatus::DISCONNECTED:

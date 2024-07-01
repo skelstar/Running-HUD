@@ -8,12 +8,12 @@
 
 namespace Leds
 {
-	Adafruit_NeoPixel hudLed = Adafruit_NeoPixel(PIXEL_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
+	// Adafruit_NeoPixel hudLed = Adafruit_NeoPixel(PIXEL_COUNT, LED_PIN, NEO_GRBW + NEO_KHZ800);
+	Adafruit_NeoPixel hudLed = Adafruit_NeoPixel(PIXEL_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
 
+	uint32_t THIRD_PWR = 130;
 	uint32_t COLOUR_OFF = hudLed.Color(0, 0, 0);
-	uint32_t COLOUR_GREY = hudLed.Color(0, 0, 0, 100);
-	uint32_t COLOUR_WHITE = hudLed.Color(0, 0, 0, 255);
-	uint32_t COLOUR_HEADLIGHT_WHITE = hudLed.Color(0, 0, 30, 255);
+	uint32_t COLOUR_WHITE = hudLed.Color(THIRD_PWR, THIRD_PWR, THIRD_PWR);
 	uint32_t COLOUR_YELLOW = hudLed.Color(255, 255, 0);
 	uint32_t COLOUR_RED = hudLed.Color(255, 0, 0);
 	uint32_t COLOUR_DARK_RED = hudLed.Color(100, 0, 0);

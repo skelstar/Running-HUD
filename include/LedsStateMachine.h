@@ -14,6 +14,7 @@ namespace Leds
         TR_IN_ZONE,
         TR_ABOVE_ZONE,
         TR_ABOVE_ZONE_PLUS,
+        TR_AT_LTHR,
         TR_CYCLE_BRIGHTNESS,
         TR_ZONE_CHANGE,
         TR_POWERING_DOWN,
@@ -27,6 +28,7 @@ namespace Leds
         STATE_IN_ZONE,
         STATE_ABOVE_ZONE,
         STATE_ABOVE_ZONE_PLUS,
+        STATE_AT_LTHR,
         STATE_CYCLE_BRIGHTNESS,
         STATE_ZONE_CHANGE,
         STATE_IDLE,
@@ -47,7 +49,6 @@ namespace Leds
     struct CurrentZone
     {
         uint8_t number;
-        // uint32_t colour;
         FlashSchema schema;
         uint8_t numFlashes = 2;
         uint16_t flashWindow = TWO_SECONDS;
@@ -58,12 +59,15 @@ namespace Leds
     void toggleLed()
     {
         ledState = !ledState;
-        setLed(ledState ? currentColour : COLOUR_OFF, DONT_UPDATE_CURRENT);
+        uint32_t toggleColour = ledState ? currentColour : COLOUR_OFF;
+        setLed(toggleColour, DONT_UPDATE_CURRENT);
+
         sinceFlashed = 0;
     }
 
-    void setZoneFlashes(uint8_t numFlashes, uint16_t period, FlashSchema schema = FLASHES_EACH_SECOND)
+    void setZoneFlashes(uint32_t colour, uint8_t numFlashes, uint16_t period, FlashSchema schema = FLASHES_EACH_SECOND)
     {
+        Leds::setLed(colour);
         thisZone.schema = schema;
         thisZone.numFlashes = numFlashes;
         thisZone.flashWindow = period;
@@ -88,9 +92,7 @@ namespace Leds
         if (schema == FLASHES_EACH_SECOND ||
             schema == FLASHES_ONE_OFF)
         {
-            uint16_t waitPeriod = ledState == LED_ON
-                                      ? FLASH_ON_TIME
-                                      : FLASH_OFF_TIME;
+            uint16_t waitPeriod = ledState == LED_ON ? FLASH_ON_TIME : FLASH_OFF_TIME;
 
             // toggle led if we need to
             if (sinceFlashed > waitPeriod && flashCounter < thisZone.numFlashes)
@@ -118,9 +120,14 @@ namespace Leds
         }
     }
 
-#define NUM_FLASHES_BELOW_ZONE 2
-#define NUM_FLASHES_ABOVE_ZONE 1
-#define NUM_FLASHES_ABOVE_ZONE_PLUS 3
+#define FLASHES_ONE 1
+#define FLASHES_TWO 2
+#define FLASHES_THREE 3
+#define FLASHES_LOTS 5
+    // const uint32_t BELOW_ZONE_COLOUR = COLOUR_WHITE;
+    // const uint32_t ABOVE_ZONE_COLOUR = COLOUR_WHITE;
+    // const uint32_t ABOVE_ZONE_PLUS_COLOUR = COLOUR_WHITE;
+    // const uint32_t AT_LTHR_COLOUR = COLOUR_RED;
 
     void onEnter_disconnected()
     {
@@ -137,8 +144,7 @@ namespace Leds
     void onEnter_belowZone()
     {
         Serial.printf("onEnter_belowZone() \n");
-        Leds::setLed(COLOUR_WHITE);
-        setZoneFlashes(NUM_FLASHES_BELOW_ZONE, TWO_SECONDS);
+        setZoneFlashes(COLOUR_WHITE, FLASHES_ONE, TWO_SECONDS);
     }
 
     void onEnter_inZone()
@@ -150,15 +156,19 @@ namespace Leds
     void onEnter_aboveZone()
     {
         Serial.printf("onEnter_aboveZone() \n");
-        Leds::setLed(COLOUR_WHITE);
-        setZoneFlashes(NUM_FLASHES_ABOVE_ZONE, ONE_AND_HALF_SECONDS);
+        setZoneFlashes(COLOUR_WHITE, FLASHES_ONE, ONE_AND_HALF_SECONDS);
     }
 
     void onEnter_aboveZonePlus()
     {
         Serial.printf("onEnter_aboveZonePlus() \n");
-        Leds::setLed(COLOUR_WHITE);
-        setZoneFlashes(NUM_FLASHES_ABOVE_ZONE_PLUS, TWO_THIRDS_SECONDS);
+        setZoneFlashes(COLOUR_WHITE, FLASHES_THREE, TWO_THIRDS_SECONDS);
+    }
+
+    void onEnter_atLTHR()
+    {
+        Serial.printf("onEnter_atLTHR() \n");
+        setZoneFlashes(COLOUR_RED, FLASHES_LOTS, TWO_THIRDS_SECONDS);
     }
 
     void onEnter_cycleBrightness()
@@ -179,8 +189,8 @@ namespace Leds
     {
         Serial.printf("onEnter_powerDown() \n");
         setBrightness(Brightness::BRIGHT_HIGHER);
-        Leds::setLed(COLOUR_RED);
-        setZoneFlashes(8, TWO_SECONDS, FLASHES_ONE_OFF);
+        // Leds::setLed(COLOUR_RED);
+        setZoneFlashes(COLOUR_RED, 8, TWO_SECONDS, FLASHES_ONE_OFF);
         Leds::setBrightness(BRIGHT_HIGH);
     }
 
@@ -189,8 +199,8 @@ namespace Leds
         Serial.printf("onEnter_customHeartRate() \n");
         _oldBrightness = _brightness;
         setBrightness(Brightness::BRIGHT_HIGHER);
-        Leds::setLed(COLOUR_BLUE);
-        setZoneFlashes(8, ONE_SECONDS, FLASHES_ONE_OFF);
+        // Leds::setLed(COLOUR_BLUE);
+        setZoneFlashes(COLOUR_BLUE, 8, ONE_SECONDS, FLASHES_ONE_OFF);
     }
 
     void onExit_customerHeartRate()
@@ -204,6 +214,7 @@ namespace Leds
         State("stateInZone", &onEnter_inZone, &handleSchema_OnState),
         State("stateAboveZone", &onEnter_aboveZone, &handleSchema_OnState),
         State("stateAboveZonePlus", &onEnter_aboveZonePlus, &handleSchema_OnState),
+        State("stateAtLTHR", &onEnter_atLTHR, &handleSchema_OnState),
         State("stateCycleBrightness", &onEnter_cycleBrightness),
         State("stateZoneChange", &onEnter_zoneChange),
         State("stateIdle", &onEnter_idle),
@@ -229,23 +240,39 @@ namespace Leds
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_IN_ZONE], Trigger::TR_IN_ZONE, &onRun),
 
         // TR_ABOVE_ZONE
+        Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_ABOVE_ZONE], Trigger::TR_ABOVE_ZONE, &onRun),
 
         // TR_ABOVE_ZONE_PLUS
+        Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_ABOVE_ZONE_PLUS], Trigger::TR_ABOVE_ZONE_PLUS, &onRun),
 
+        // TR_AT_LTHR
+        Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_AT_LTHR], Trigger::TR_AT_LTHR, &onRun),
+        Transition(&zone[STATE_IN_ZONE], &zone[STATE_AT_LTHR], Trigger::TR_AT_LTHR, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_AT_LTHR], Trigger::TR_AT_LTHR, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_AT_LTHR], Trigger::TR_AT_LTHR, &onRun),
+        Transition(&zone[STATE_DISCONNECTED], &zone[STATE_AT_LTHR], Trigger::TR_AT_LTHR, &onRun),
+        Transition(&zone[STATE_IDLE], &zone[STATE_AT_LTHR], Trigger::TR_AT_LTHR, &onRun),
+
         // TR_BELOW_ZONE
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
+        Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_BELOW_ZONE], Trigger::TR_BELOW_ZONE, &onRun),
 
@@ -254,6 +281,7 @@ namespace Leds
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
         Transition(&zone[STATE_IDLE], &zone[STATE_DISCONNECTED], Trigger::TR_DISCONNECTED, &onRun),
 
         // -> TR_CYCLE_BRIGHTNESS
@@ -262,12 +290,14 @@ namespace Leds
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_CYCLE_BRIGHTNESS], Trigger::TR_CYCLE_BRIGHTNESS, &onRun),
 
         // -> TR_ZONE_CHANGE
         Transition(&zone[STATE_BELOW_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_ZONE_CHANGE], Trigger::TR_ZONE_CHANGE, &onRun),
 
         // TR_POWERING_DOWN
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
@@ -275,6 +305,7 @@ namespace Leds
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_POWER_DOWN], Trigger::TR_POWERING_DOWN, &onRun),
 
         // TR_CUSTOM_HEARTRATE
         Transition(&zone[STATE_DISCONNECTED], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
@@ -282,6 +313,7 @@ namespace Leds
         Transition(&zone[STATE_IN_ZONE], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
         Transition(&zone[STATE_ABOVE_ZONE_PLUS], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
+        Transition(&zone[STATE_AT_LTHR], &zone[STATE_CUSTOM_HEART_RATE], Trigger::TR_CUSTOM_HEARTRATE, &onRun),
     };
 
     void SetupFsm()
